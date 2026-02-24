@@ -78,6 +78,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { Freelancer } from "../models/freelancers.model.js";
+import { sendVerificationEmail } from "../utils/email.js";
+const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 dotenv.config();
 
 /* ==============================
@@ -108,6 +110,9 @@ export const registerFreelancer = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const code = generateCode();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+
     const newFreelancer = new Freelancer({
       firstname: firstName || name.split(" ")[0] || name,
       lastname: lastName || name.split(" ").slice(1).join(" ") || "",
@@ -116,11 +121,21 @@ export const registerFreelancer = async (req, res) => {
       password: hashedPassword,
       skills,
       experience,
+      isEmailVerified: false,
+      emailVerificationCode: code,
+      emailVerificationExpires: expires,
     });
 
     await newFreelancer.save();
+
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (e) {
+      console.warn("⚠️ Failed to send verification email to freelancer:", e.message);
+    }
+
     // Return the created freelancer so frontend can redirect and store id
-    res.status(201).json({ message: "Freelancer registered successfully", freelancer: newFreelancer });
+    res.status(201).json({ message: "Freelancer registered. Please verify your email with the OTP sent.", freelancer: newFreelancer, requiresEmailVerification: true });
   } catch (error) {
     console.error("❌ Register freelancer error:", error);
     res.status(500).json({ message: error.message });
@@ -135,6 +150,10 @@ export const loginFreelancer = async (req, res) => {
     const { email, password } = req.body;
     const freelancer = await Freelancer.findOne({ email });
     if (!freelancer) return res.status(404).json({ message: "No freelancer found with this email. Please check your credentials or sign up first.", field: "email", role: "freelancer" });
+
+    if (!freelancer.isEmailVerified) {
+      return res.status(403).json({ message: "Please verify your email before logging in.", field: "email", role: "freelancer" });
+    }
 
     const valid = await bcrypt.compare(password, freelancer.password);
     if (!valid) return res.status(401).json({ message: "Incorrect password. Please try again.", field: "password", role: "freelancer" });
@@ -152,6 +171,45 @@ export const loginFreelancer = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Verify freelancer email with OTP
+export const verifyFreelancerEmail = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and code are required" });
+    }
+
+    const freelancer = await Freelancer.findOne({ email });
+    if (!freelancer) return res.status(404).json({ message: "Freelancer not found" });
+
+    if (freelancer.isEmailVerified) {
+      return res.status(200).json({ message: "Email already verified" });
+    }
+
+    if (!freelancer.emailVerificationCode || !freelancer.emailVerificationExpires) {
+      return res.status(400).json({ message: "No verification code found. Please sign up again." });
+    }
+
+    if (freelancer.emailVerificationExpires < new Date()) {
+      return res.status(400).json({ message: "Verification code has expired. Please sign up again." });
+    }
+
+    if (freelancer.emailVerificationCode !== code) {
+      return res.status(400).json({ message: "Invalid verification code" });
+    }
+
+    freelancer.isEmailVerified = true;
+    freelancer.emailVerificationCode = undefined;
+    freelancer.emailVerificationExpires = undefined;
+    await freelancer.save();
+
+    return res.status(200).json({ message: "Email verified successfully" });
+  } catch (err) {
+    console.error("verifyFreelancerEmail error:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

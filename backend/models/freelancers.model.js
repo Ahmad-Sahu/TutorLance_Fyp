@@ -66,6 +66,17 @@ const freelancerSchema = new mongoose.Schema({
   lastname: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  // Email verification
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerificationCode: {
+    type: String,
+  },
+  emailVerificationExpires: {
+    type: Date,
+  },
   // Primary domain or skills (used for matching student gigs)
   skills: String,
   // Friendly full name (optional) - backend may set this from firstname+lastname

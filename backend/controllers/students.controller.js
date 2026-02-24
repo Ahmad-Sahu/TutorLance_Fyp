@@ -4,50 +4,67 @@ import {Booking} from '../models/Booking.model.js';
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {z} from "zod";
+import { sendVerificationEmail } from "../utils/email.js";
 
+const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const signup = async (req, res) => {
-    const {role, firstName, lastName, email, password} = req.body;
+  const {role, firstName, lastName, email, password} = req.body;
 
-    const signupSchema = z.object({
+  const signupSchema = z.object({
     role: z.enum(["tutor", "student", "freelancer", "admin"]),
     firstName: z.string().min(2,{message : "First name must be at least 2 characters long"}).max(100),
     lastName: z.string().min(2,{message : "Last name must be at least 2 characters long"}).max(100),
     email: z.string().email({message : "Invalid email format"}),
     password: z.string().min(6,{message : "Password must be at least 6 characters long"}).max(100)
-});
+  });
 
-const validation = signupSchema.safeParse(req.body);
-    if (!validation.success) {
-        return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
+  const validation = signupSchema.safeParse(req.body);
+  if (!validation.success) {
+    return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
+  }
+
+  try {
+    const existingStudent = await Student.findOne({ email });
+    if (existingStudent) {
+      return res.status(400).json({
+        message: "Student with this email already exists. Please login or use a different email.",
+        field: "email",
+        role: "student"
+      });
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const code = generateCode();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+    const newStudent = new Student({
+      role,
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      isEmailVerified: false,
+      emailVerificationCode: code,
+      emailVerificationExpires: expires,
+    });
+
+    await newStudent.save();
 
     try {
-        const existingStudent = await Student.findOne({ email });
-        if (existingStudent) {
-            return res.status(400).json({
-                message: "Student with this email already exists. Please login or use a different email.",
-                field: "email",
-                role: "student"
-            });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newStudent = new Student({
-            role,
-            firstName,
-            lastName,
-            email,
-            password : hashedPassword
-        });
-
-        await newStudent.save();
-        return res.status(201).json({ message: "Student registered successfully" });
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
+      await sendVerificationEmail(email, code);
+    } catch (e) {
+      console.warn("⚠️ Failed to send verification email to student:", e.message);
     }
+
+    return res.status(201).json({
+      message: "Student registered. Please verify your email with the OTP sent.",
+      requiresEmailVerification: true,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 }
 
 export const login = async (req, res) => {
@@ -57,6 +74,15 @@ export const login = async (req, res) => {
         const student = await Student.findOne({ email });
         if (!student) {
             return res.status(400).json({ success: false, message: "No student found with this email. Please check your credentials or sign up first.", field: "email", role: "student" });
+        }
+
+        if (!student.isEmailVerified) {
+            return res.status(403).json({
+                success: false,
+                message: "Please verify your email before logging in.",
+                field: "email",
+                role: "student",
+            });
         }
 
         const isMatch = await bcrypt.compare(password, student.password);
@@ -89,6 +115,45 @@ export const login = async (req, res) => {
         console.log(error);
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
+};
+
+// ✅ Verify student email with OTP
+export const verifyStudentEmail = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and code are required" });
+    }
+
+    const student = await Student.findOne({ email });
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    if (student.isEmailVerified) {
+      return res.status(200).json({ message: "Email already verified" });
+    }
+
+    if (!student.emailVerificationCode || !student.emailVerificationExpires) {
+      return res.status(400).json({ message: "No verification code found. Please sign up again." });
+    }
+
+    if (student.emailVerificationExpires < new Date()) {
+      return res.status(400).json({ message: "Verification code has expired. Please sign up again." });
+    }
+
+    if (student.emailVerificationCode !== code) {
+      return res.status(400).json({ message: "Invalid verification code" });
+    }
+
+    student.isEmailVerified = true;
+    student.emailVerificationCode = undefined;
+    student.emailVerificationExpires = undefined;
+    await student.save();
+
+    return res.status(200).json({ message: "Email verified successfully" });
+  } catch (err) {
+    console.error("verifyStudentEmail error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 };
 
 // Get student notifications

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const studentSchema = new mongoose.Schema({
-    role: {
+  role: {
     type: String,
     enum: ['tutor', 'student', 'admin', 'freelancer'],
     required: true,
@@ -17,33 +17,45 @@ const studentSchema = new mongoose.Schema({
     required: true,
   },
 
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-    },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
 
-    password: {
-        type: String,
-        required: true,
-    },
+  password: {
+    type: String,
+    required: true,
+  },
 
-    profilePicture: {
-        type: String, // Cloudinary URL
-    },
+  // Email verification
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerificationCode: {
+    type: String,
+  },
+  emailVerificationExpires: {
+    type: Date,
+  },
 
-    dateOfBirth: {
-        type: Date,
-    },
+  profilePicture: {
+    type: String, // Cloudinary URL
+  },
 
-    savedTutors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tutor' }],
-    notifications: [
-      {
-        message: String,
-        read: { type: Boolean, default: false },
-        createdAt: { type: Date, default: Date.now }
-      }
-    ]
+  dateOfBirth: {
+    type: Date,
+  },
+
+  savedTutors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tutor' }],
+  notifications: [
+    {
+      message: String,
+      read: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ]
 }, { timestamps: true })
 
 export const Student = mongoose.model("Student", studentSchema);

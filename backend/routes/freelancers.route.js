@@ -20,6 +20,7 @@ import {
   addOrder,
   getFreelancerDashboard,
   getRandomFreelancers,
+  verifyFreelancerEmail,
 } from "../controllers/freelancers.controller.js";
 
 const router = express.Router();
@@ -27,6 +28,7 @@ const router = express.Router();
 // Authentication
 router.post("/register", registerFreelancer);
 router.post("/login", loginFreelancer);
+router.post("/verify-email", verifyFreelancerEmail);
 
 // Profile
 router.get("/:id", getFreelancerProfile);

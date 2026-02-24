@@ -81,6 +81,8 @@ const validation = signupSchema.safeParse(req.body);
 // };
 
 import jwt from "jsonwebtoken";
+import { sendVerificationEmail } from "../utils/email.js";
+const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // ✅ Tutor Signup Controller
 export const tutorSignup = async (req, res) => {
@@ -95,6 +97,8 @@ export const tutorSignup = async (req, res) => {
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const code = generateCode();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
 
     // Create tutor with default values for required fields
     const tutor = await Tutor.create({
@@ -108,9 +112,18 @@ export const tutorSignup = async (req, res) => {
       hourlyRate: 0, // Will be set during profile completion
       availability: [], // Will be set during profile completion
       profileCompleted: false,
+      isEmailVerified: false,
+      emailVerificationCode: code,
+      emailVerificationExpires: expires,
     });
 
-    res.status(201).json({ message: "Tutor registered successfully", tutor });
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (e) {
+      console.warn("⚠️ Failed to send verification email to tutor:", e.message);
+    }
+
+    res.status(201).json({ message: "Tutor registered. Please verify your email with the OTP sent.", tutor, requiresEmailVerification: true });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error during tutor signup" });
@@ -126,6 +139,10 @@ export const tutorLogin = async (req, res) => {
     const tutor = await Tutor.findOne({ email });
     if (!tutor) {
       return res.status(404).json({ message: "Tutor not found" });
+    }
+
+    if (!tutor.isEmailVerified) {
+      return res.status(403).json({ message: "Please verify your email before logging in." });
     }
 
     // Validate password
@@ -156,6 +173,45 @@ export const tutorLogin = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error during tutor login" });
+  }
+};
+
+// ✅ Verify tutor email with OTP
+export const verifyTutorEmail = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and code are required" });
+    }
+
+    const tutor = await Tutor.findOne({ email });
+    if (!tutor) return res.status(404).json({ message: "Tutor not found" });
+
+    if (tutor.isEmailVerified) {
+      return res.status(200).json({ message: "Email already verified" });
+    }
+
+    if (!tutor.emailVerificationCode || !tutor.emailVerificationExpires) {
+      return res.status(400).json({ message: "No verification code found. Please sign up again." });
+    }
+
+    if (tutor.emailVerificationExpires < new Date()) {
+      return res.status(400).json({ message: "Verification code has expired. Please sign up again." });
+    }
+
+    if (tutor.emailVerificationCode !== code) {
+      return res.status(400).json({ message: "Invalid verification code" });
+    }
+
+    tutor.isEmailVerified = true;
+    tutor.emailVerificationCode = undefined;
+    tutor.emailVerificationExpires = undefined;
+    await tutor.save();
+
+    return res.status(200).json({ message: "Email verified successfully" });
+  } catch (err) {
+    console.error("verifyTutorEmail error:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

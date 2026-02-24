@@ -1,5 +1,5 @@
 import express from "express";
-import { login, signup, getNotifications, getStudentProfile, updateStudentProfile, getStudentBookings, createBooking, negotiateBooking, confirmBooking, cancelBooking, markSessionDone, rateTutor, saveTutor, unsaveTutor, getSavedTutors } from "../controllers/students.controller.js";
+import { login, signup, getNotifications, getStudentProfile, updateStudentProfile, getStudentBookings, createBooking, negotiateBooking, confirmBooking, cancelBooking, markSessionDone, rateTutor, saveTutor, unsaveTutor, getSavedTutors, verifyStudentEmail } from "../controllers/students.controller.js";
 import { authenticateStudent } from "../middleware/auth.js";
 
 import { createGig, getRelevantGigs, getGigsByStudent, updateGig, deleteGig } from "../controllers/Student_Gig.controller.js";
@@ -7,6 +7,7 @@ import { createGig, getRelevantGigs, getGigsByStudent, updateGig, deleteGig } fr
 const router = express.Router();
 
 router.post("/signup", signup);
+router.post("/verify-email", verifyStudentEmail);
 router.post("/login", login);
 
 // Get student profile

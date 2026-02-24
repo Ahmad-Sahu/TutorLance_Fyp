@@ -10,13 +10,14 @@
 // export default router;
 
 import express from "express";
-import { tutorLogin, tutorSignup, getTutorProfile, getPublicTutorProfile, getTutors, updateTutorProfile, getTutorBookings, getPublicBookingsForTutor, updateBookingStatus, createSession, markSessionDone, withdrawEarnings, negotiateBooking } from "../controllers/tutors.controller.js";
+import { tutorLogin, tutorSignup, getTutorProfile, getPublicTutorProfile, getTutors, updateTutorProfile, getTutorBookings, getPublicBookingsForTutor, updateBookingStatus, createSession, markSessionDone, withdrawEarnings, negotiateBooking, verifyTutorEmail } from "../controllers/tutors.controller.js";
 import { authenticateTutor } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // Tutor Signup Route
 router.post("/signup", tutorSignup);
+router.post("/verify-email", verifyTutorEmail);
 
 // Tutor Login Route
 router.post("/login", tutorLogin);
