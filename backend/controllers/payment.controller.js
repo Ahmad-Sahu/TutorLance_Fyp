@@ -1,10 +1,20 @@
 import Stripe from 'stripe';
 import { Booking } from '../models/Booking.model.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Safely initialize Stripe so backend can run even if key is missing
+let stripe = null;
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn('⚠️ STRIPE_SECRET_KEY not set. Stripe payments are disabled.');
+} else {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 // ✅ Handle Stripe Webhooks
 export const handleWebhook = async (req, res) => {
+  if (!stripe) {
+    return res.status(400).json({ message: "Stripe not configured on server" });
+  }
+
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -60,6 +70,9 @@ export const handleWebhook = async (req, res) => {
 // ✅ Create Payment Intent
 export const createPaymentIntent = async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(500).json({ message: "Payments are disabled: STRIPE_SECRET_KEY not configured" });
+    }
     const { bookingId } = req.body;
     const studentId = req.student.id;
 
@@ -88,6 +101,9 @@ export const createPaymentIntent = async (req, res) => {
 // ✅ Confirm Payment
 export const confirmPayment = async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(500).json({ message: "Payments are disabled: STRIPE_SECRET_KEY not configured" });
+    }
     const { paymentIntentId } = req.body;
     const studentId = req.student.id;
 
@@ -116,6 +132,9 @@ export const confirmPayment = async (req, res) => {
 // ✅ Release Payment (after session completion)
 export const releasePayment = async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(500).json({ message: "Payments are disabled: STRIPE_SECRET_KEY not configured" });
+    }
     const { bookingId } = req.params;
 
     const booking = await Booking.findById(bookingId);
@@ -139,6 +158,9 @@ export const releasePayment = async (req, res) => {
 // ✅ Refund Payment
 export const refundPayment = async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(500).json({ message: "Payments are disabled: STRIPE_SECRET_KEY not configured" });
+    }
     const { bookingId } = req.params;
 
     const booking = await Booking.findById(bookingId);
@@ -162,6 +184,9 @@ export const refundPayment = async (req, res) => {
 // Process expired session deadlines: refund to student if link not used / class not done by deadline, or link not sent by tutor by due date
 export const processExpiredBookings = async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(200).json({ message: "Stripe not configured; skipped processing expired bookings" });
+    }
     const now = new Date();
     const expiredByDeadline = await Booking.find({
       sessionLinkDeadline: { $exists: true, $ne: null, $lt: now },
