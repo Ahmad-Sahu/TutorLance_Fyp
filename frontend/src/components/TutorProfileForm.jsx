@@ -1,22 +1,52 @@
 import React, { useState, useEffect } from "react";
+import Select from "react-select";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { SiStudyverse } from "react-icons/si";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 
-const TutorProfileForm = () => {
+const TutorProfileForm = ({
+    initialValues = {},
+    editMode = false,
+    onSave,
+    onCancel
+}) => {
     const navigate = useNavigate();
+    const subjectOptions = [
+        { value: "Mathematics", label: "Mathematics" },
+        { value: "Physics", label: "Physics" },
+        { value: "Chemistry", label: "Chemistry" },
+        { value: "Biology", label: "Biology" },
+        { value: "English", label: "English" },
+        { value: "Computer Science", label: "Computer Science" },
+        { value: "Economics", label: "Economics" },
+        { value: "Business", label: "Business" },
+        { value: "History", label: "History" },
+        { value: "Other", label: "Other" },
+    ];
+    const specialityOptions = [
+        { value: "beginner", label: "Beginner" },
+        { value: "advance", label: "Advance" },
+        { value: "expert", label: "Expert" },
+    ];
+    const languageOptions = [
+        { value: "English", label: "English" },
+        { value: "Urdu", label: "Urdu" },
+    ];
+    const availabilityOptions = [
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+    ];
     const [formData, setFormData] = useState({
-        subjects: [],
-        hourlyRate: "",
-        countryOfBirth: "",
-        specialities: [],
-        languages: [],
-        availability: [],
-        bio: "",
-        qualifications: "",
-        youtubeLink: "",
-        profilePicture: ""
+        subjects: initialValues.subjects || [],
+        hourlyRate: initialValues.hourlyRate || "",
+        countryOfBirth: initialValues.countryOfBirth || "",
+        specialities: initialValues.specialities || [],
+        languages: initialValues.languages || [],
+        availability: initialValues.availability || [],
+        bio: initialValues.bio || "",
+        qualifications: initialValues.qualifications || "",
+        youtubeLink: initialValues.youtubeLink || "",
+        profilePicture: initialValues.profilePicture || ""
     });
     const [profilePictureFile, setProfilePictureFile] = useState(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState("");
@@ -29,11 +59,30 @@ const TutorProfileForm = () => {
             navigate("/login");
             return;
         }
-        // You could verify the token here if needed
     }, [navigate]);
+
+    // Strict text validation: only spaces between words, no leading/trailing/multiple spaces, max 20 words
+    const isValidText = (val) => {
+        if (!val) return false;
+        const trimmed = val.trim();
+        if (!trimmed) return false;
+        if (/  +/.test(trimmed)) return false;
+        if (!/^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/.test(trimmed)) return false;
+        if (trimmed.split(' ').length > 20) return false;
+        return true;
+    };
+    // Payment validation: min 300, max 3000
+    const isValidAmount = (val) => {
+        const num = Number(val);
+        return !isNaN(num) && num >= 300 && num <= 3000;
+    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+        // For hourlyRate, validate amount
+        if (name === "hourlyRate") {
+            if (!isValidAmount(value)) return;
+        }
         setFormData(prev => ({
             ...prev,
             [name]: value
@@ -43,23 +92,55 @@ const TutorProfileForm = () => {
     const handleArrayInput = (field, value) => {
         setFormData(prev => ({
             ...prev,
-            [field]: value.split(',').map(item => item.trim()).filter(item => item)
+            [field]: value.split(',').map(item => item.trim()).filter(isValidText)
         }));
     };
 
+    // Subjects dropdown (max 3)
+    const handleSubjectsChange = (selected) => {
+        if (selected.length > 3) return;
+        setFormData(prev => ({ ...prev, subjects: selected.map(s => s.value) }));
+    };
+    // Specialities dropdown (single select)
+    const handleSpecialityChange = (selected) => {
+        setFormData(prev => ({ ...prev, specialities: selected ? [selected.value] : [] }));
+    };
+    // Languages dropdown (multi-select)
+    const handleLanguagesChange = (selected) => {
+        setFormData(prev => ({ ...prev, languages: selected ? selected.map(s => s.value) : [] }));
+    };
+    // Availability (min 2, max 7, 'All Days')
     const handleAvailabilityChange = (day) => {
-        setFormData(prev => ({
-            ...prev,
-            availability: prev.availability.includes(day)
+        if (day === 'All Days') {
+            setFormData(prev => ({ ...prev, availability: [...availabilityOptions] }));
+            return;
+        }
+        setFormData(prev => {
+            const already = prev.availability.includes(day);
+            let updated = already
                 ? prev.availability.filter(d => d !== day)
-                : [...prev.availability, day]
-        }));
+                : [...prev.availability, day];
+            // Remove 'All Days' if present
+            updated = updated.filter(d => d !== 'All Days');
+            return { ...prev, availability: updated };
+        });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
+        // Validate all fields
+        if (!formData.subjects.length) return toast.error("Select at least 1 subject");
+        if (formData.subjects.length > 3) return toast.error("Select up to 3 subjects");
+        if (!isValidAmount(formData.hourlyRate)) return toast.error("Hourly rate must be between 300 and 3000");
+        if (!isValidText(formData.countryOfBirth)) return toast.error("Country of birth required");
+        if (!formData.specialities.length) return toast.error("Select a speciality");
+        if (!formData.languages.length) return toast.error("Select at least one language");
+        if (formData.availability.length < 2) return toast.error("Select at least 2 days for availability");
+        if (formData.availability.length > 7) return toast.error("Select up to all days");
+        if (!isValidText(formData.bio)) return toast.error("Bio required");
+        if (!isValidText(formData.qualifications)) return toast.error("Qualifications required");
 
+        setLoading(true);
         try {
             let profilePictureUrl = formData.profilePicture;
             if (profilePictureFile) {
@@ -67,28 +148,31 @@ const TutorProfileForm = () => {
                 if (url) profilePictureUrl = url;
                 else toast.error("Image upload failed. Saving without new photo.");
             }
-
-            const token = localStorage.getItem("token");
-            const response = await fetch("http://localhost:3000/api/v1/tutors/profile", {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    profilePicture: profilePictureUrl,
-                    profileCompleted: true
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                toast.success("Profile completed successfully!");
-                navigate("/tutordashboard");
+            const payload = {
+                ...formData,
+                profilePicture: profilePictureUrl,
+                profileCompleted: true
+            };
+            if (onSave) {
+                await onSave(payload);
             } else {
-                toast.error(data.message || "Failed to update profile");
+                // fallback: default behavior (for standalone use)
+                const token = localStorage.getItem("token");
+                const response = await fetch("http://localhost:3000/api/v1/tutors/profile", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    toast.success("Profile completed successfully!");
+                    // Do not redirect, stay on same page
+                } else {
+                    toast.error(data.message || "Failed to update profile");
+                }
             }
         } catch (error) {
             console.error("Error updating profile:", error);
@@ -109,28 +193,31 @@ const TutorProfileForm = () => {
             </div>
 
             <div className="max-w-4xl mx-auto p-6">
-                <h2 className="text-3xl font-bold text-gray-900 mb-8">Complete Your Tutor Profile</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-8">{editMode ? "Edit Tutor Profile" : "Complete Your Tutor Profile"}</h2>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Subjects */}
+                    {/* Subjects (Dropdown, max 3) */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Subjects you teach (comma-separated)
+                            Subjects you teach (select up to 3)
                         </label>
-                        <input
-                            type="text"
-                            placeholder="e.g., Mathematics, Physics, Chemistry"
-                            value={formData.subjects.join(', ')}
-                            onChange={(e) => handleArrayInput('subjects', e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        <Select
+                            isMulti
+                            options={subjectOptions}
+                            value={subjectOptions.filter(opt => formData.subjects.includes(opt.value))}
+                            onChange={handleSubjectsChange}
+                            className="mb-2"
+                            closeMenuOnSelect={false}
+                            placeholder="Select subjects..."
                             required
                         />
+                        <div className="text-xs text-gray-500">Max 3 subjects</div>
                     </div>
 
                     {/* Hourly Rate */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Hourly Rate (PKR)
+                            Hourly Rate (PKR, 300-2500)
                         </label>
                         <input
                             type="number"
@@ -138,6 +225,8 @@ const TutorProfileForm = () => {
                             value={formData.hourlyRate}
                             onChange={handleInputChange}
                             name="hourlyRate"
+                            min={300}
+                            max={2500}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             required
                         />
@@ -165,42 +254,55 @@ const TutorProfileForm = () => {
                         </select>
                     </div>
 
-                    {/* Specialities */}
+                    {/* Specialities (Dropdown) */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Specialities (comma-separated)
+                            Speciality
                         </label>
-                        <input
-                            type="text"
-                            placeholder="e.g., Beginner, Advanced, Interview Prep"
-                            value={formData.specialities.join(', ')}
-                            onChange={(e) => handleArrayInput('specialities', e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                    </div>
-
-                    {/* Languages */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Languages you speak (comma-separated)
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="e.g., English, Urdu, Hindi"
-                            value={formData.languages.join(', ')}
-                            onChange={(e) => handleArrayInput('languages', e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        <Select
+                            options={specialityOptions}
+                            value={specialityOptions.find(opt => formData.specialities[0] === opt.value) || null}
+                            onChange={handleSpecialityChange}
+                            className="mb-2"
+                            placeholder="Select speciality..."
+                            isClearable
                             required
                         />
                     </div>
 
-                    {/* Availability */}
+                    {/* Languages (Dropdown) */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Availability (select days)
+                            Languages you speak
+                        </label>
+                        <Select
+                            isMulti
+                            options={languageOptions}
+                            value={languageOptions.filter(opt => formData.languages.includes(opt.value))}
+                            onChange={handleLanguagesChange}
+                            className="mb-2"
+                            closeMenuOnSelect={false}
+                            placeholder="Select languages..."
+                            required
+                        />
+                    </div>
+
+                    {/* Availability (Checkboxes, min 2, max 7, All Days) */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Availability (select at least 2 days)
                         </label>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                            <label className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.availability.length === 7}
+                                    onChange={() => handleAvailabilityChange('All Days')}
+                                    className="mr-2"
+                                />
+                                All Days
+                            </label>
+                            {availabilityOptions.map(day => (
                                 <label key={day} className="flex items-center">
                                     <input
                                         type="checkbox"
@@ -286,13 +388,25 @@ const TutorProfileForm = () => {
 
                     {/* Submit Button */}
                     <div className="pt-6">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? "Saving..." : "Complete Profile"}
-                        </button>
+                        <div className="flex gap-4">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? (editMode ? "Saving..." : "Saving...") : (editMode ? "Save Changes" : "Complete Profile")}
+                            </button>
+                            {editMode && (
+                                <button
+                                    type="button"
+                                    onClick={onCancel}
+                                    className="w-full bg-gray-300 text-gray-800 py-3 px-6 rounded-lg font-semibold hover:bg-gray-400 transition"
+                                    disabled={loading}
+                                >
+                                    Cancel
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </form>
             </div>

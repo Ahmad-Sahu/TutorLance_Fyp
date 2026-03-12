@@ -29,14 +29,14 @@ const studentSchema = new mongoose.Schema({
   },
 
   // Email verification
-  isEmailVerified: {
+  isVerified: {
     type: Boolean,
     default: false,
   },
-  emailVerificationCode: {
+  otp: {
     type: String,
   },
-  emailVerificationExpires: {
+  otpExpiry: {
     type: Date,
   },
 

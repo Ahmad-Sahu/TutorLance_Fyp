@@ -32,7 +32,7 @@ function Home() {
                     <div className='flex items-center justify-between'>
                         <a className='flex items-center mr-8 font-semibold' href="">English <span className='text-4xl ml-2 font-bold'><MdExpandMore /></span></a>
                         <Link to="/login"><button type="button" className='flex bg-blue-600 text-white py-3 px-6 border-4 border-white rounded-full font-semibold hover:bg-blue-500'>
-                            <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login</button></Link>
+                            <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login/Signup</button></Link>
                     </div>
                 </div>
 

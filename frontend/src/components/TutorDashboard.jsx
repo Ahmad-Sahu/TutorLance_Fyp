@@ -5,7 +5,7 @@ import { SiStudyverse } from "react-icons/si";
 import { FaClipboardList, FaRegHandshake, FaInbox, FaBell, FaThumbsUp, FaUser, FaCoins, FaVideo } from "react-icons/fa";
 import axios from "axios";
 import Avatar from "./Avatar";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
+import TutorProfileForm from "./TutorProfileForm";
 
 const API = "http://localhost:3000/api/v1";
 
@@ -21,9 +21,6 @@ const TutorDashboard = () => {
   const [sessionLinkInput, setSessionLinkInput] = useState({});
   const [sessionDeadlineInput, setSessionDeadlineInput] = useState({});
   const [profileEditing, setProfileEditing] = useState(false);
-  const [profileForm, setProfileForm] = useState({});
-  const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState("");
   const [complaintText, setComplaintText] = useState("");
   const [myComplaints, setMyComplaints] = useState([]);
   const [acceptClassDueBy, setAcceptClassDueBy] = useState({});
@@ -304,25 +301,27 @@ const TutorDashboard = () => {
                   <p className="text-gray-600 mb-2">{tutor.bio}</p>
                   <p className="text-sm text-gray-500">Subjects: {tutor.subjects?.join(", ")}</p>
                   <p className="text-sm text-gray-500">PKR {tutor.hourlyRate}/hr</p>
-                  <button onClick={() => { setProfileEditing(true); setProfileForm({ bio: tutor.bio, hourlyRate: tutor.hourlyRate, qualifications: tutor.qualifications }); }} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">
+                  <button onClick={() => setProfileEditing(true)} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">
                     Edit Profile
                   </button>
                 </div>
               ) : (
                 <div className="bg-white p-6 rounded shadow max-w-2xl">
-                  <label className="block font-semibold mb-2">Profile picture (upload from device)</label>
-                  <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; setProfilePictureFile(f || null); if (f) { const r = new FileReader(); r.onload = (ev) => setProfilePicturePreview(ev.target?.result); r.readAsDataURL(f); } else setProfilePicturePreview(""); }} className="mb-2" />
-                  {profilePicturePreview && <img src={profilePicturePreview} alt="Preview" className="w-24 h-24 object-cover rounded mb-2" />}
-                  <label className="block font-semibold mb-2">Bio</label>
-                  <textarea value={profileForm.bio ?? tutor.bio} onChange={(e) => setProfileForm((p) => ({ ...p, bio: e.target.value }))} className="w-full border p-2 rounded mb-2" rows={3} />
-                  <label className="block font-semibold mb-2">Hourly rate (PKR)</label>
-                  <input type="number" value={profileForm.hourlyRate ?? tutor.hourlyRate} onChange={(e) => setProfileForm((p) => ({ ...p, hourlyRate: e.target.value }))} className="w-full border p-2 rounded mb-2" />
-                  <label className="block font-semibold mb-2">Qualifications</label>
-                  <input type="text" value={profileForm.qualifications ?? tutor.qualifications} onChange={(e) => setProfileForm((p) => ({ ...p, qualifications: e.target.value }))} className="w-full border p-2 rounded mb-2" />
-                  <div className="flex gap-2 mt-4">
-                    <button onClick={handleProfileSave} className="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
-                    <button onClick={() => { setProfileEditing(false); setProfilePictureFile(null); setProfilePicturePreview(""); }} className="bg-gray-300 px-4 py-2 rounded">Cancel</button>
-                  </div>
+                  <TutorProfileForm
+                    initialValues={tutor}
+                    editMode={true}
+                    onSave={async (payload) => {
+                      try {
+                        await axios.put(`${API}/tutors/profile`, payload, authHeaders());
+                        toast.success("Profile updated");
+                        setProfileEditing(false);
+                        fetchTutorData();
+                      } catch (err) {
+                        toast.error("Failed to update profile");
+                      }
+                    }}
+                    onCancel={() => setProfileEditing(false)}
+                  />
                 </div>
               )}
             </section>

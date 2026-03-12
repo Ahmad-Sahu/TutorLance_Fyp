@@ -1,22 +1,22 @@
-import {Student} from '../models/students.model.js';
-import {Tutor} from '../models/tutors.model.js';
-import {Booking} from '../models/Booking.model.js';
+import { Student } from '../models/students.model.js';
+import { Tutor } from '../models/tutors.model.js';
+import { Booking } from '../models/Booking.model.js';
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import {z} from "zod";
-import { sendVerificationEmail } from "../utils/email.js";
+import { z } from "zod";
+import { sendOtpEmail } from "../utils/send-email.js";
 
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const signup = async (req, res) => {
-  const {role, firstName, lastName, email, password} = req.body;
+  const { role, firstName, lastName, email, password } = req.body;
 
   const signupSchema = z.object({
     role: z.enum(["tutor", "student", "freelancer", "admin"]),
-    firstName: z.string().min(2,{message : "First name must be at least 2 characters long"}).max(100),
-    lastName: z.string().min(2,{message : "Last name must be at least 2 characters long"}).max(100),
-    email: z.string().email({message : "Invalid email format"}),
-    password: z.string().min(6,{message : "Password must be at least 6 characters long"}).max(100)
+    firstName: z.string().min(2, { message: "First name must be at least 2 characters long" }).max(100),
+    lastName: z.string().min(2, { message: "Last name must be at least 2 characters long" }).max(100),
+    email: z.string().email({ message: "Invalid email format" }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters long" }).max(100)
   });
 
   const validation = signupSchema.safeParse(req.body);
@@ -36,7 +36,7 @@ export const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const code = generateCode();
-    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
     const newStudent = new Student({
       role,
@@ -44,22 +44,22 @@ export const signup = async (req, res) => {
       lastName,
       email,
       password: hashedPassword,
-      isEmailVerified: false,
-      emailVerificationCode: code,
-      emailVerificationExpires: expires,
+      isVerified: false,
+      otp: code,
+      otpExpiry: expires,
     });
 
     await newStudent.save();
 
     try {
-      await sendVerificationEmail(email, code);
+      await sendOtpEmail(email, code);
     } catch (e) {
       console.warn("⚠️ Failed to send verification email to student:", e.message);
     }
 
     return res.status(201).json({
       message: "Student registered. Please verify your email with the OTP sent.",
-      requiresEmailVerification: true,
+      requiresOtp: true,
     });
   } catch (error) {
     console.error(error);
@@ -68,57 +68,57 @@ export const signup = async (req, res) => {
 }
 
 export const login = async (req, res) => {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    try {
-        const student = await Student.findOne({ email });
-        if (!student) {
-            return res.status(400).json({ success: false, message: "No student found with this email. Please check your credentials or sign up first.", field: "email", role: "student" });
-        }
-
-        if (!student.isEmailVerified) {
-            return res.status(403).json({
-                success: false,
-                message: "Please verify your email before logging in.",
-                field: "email",
-                role: "student",
-            });
-        }
-
-        const isMatch = await bcrypt.compare(password, student.password);
-        if (!isMatch) {
-            return res.status(400).json({ success: false, message: "Incorrect password. Please try again.", field: "password", role: "student" });
-        }
-
-        // Create JWT token
-        const token = jwt.sign(
-            { id: student._id, role: "student" },
-            process.env.JWT_SECRET,
-            { expiresIn: "7d" }
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Login successful",
-            token,
-            student: {
-                _id: student._id,
-                name: `${student.firstName} ${student.lastName}`,
-                firstName: student.firstName,
-                lastName: student.lastName,
-                email: student.email,
-                role: "student"
-            }
-        });
-
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+  try {
+    const student = await Student.findOne({ email });
+    if (!student) {
+      return res.status(400).json({ success: false, message: "No student found with this email. Please check your credentials or sign up first.", field: "email", role: "student" });
     }
+
+    if (!student.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email before logging in.",
+        field: "email",
+        role: "student",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, student.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Incorrect password. Please try again.", field: "password", role: "student" });
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      { id: student._id, role: "student" },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      student: {
+        _id: student._id,
+        name: `${student.firstName} ${student.lastName}`,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+        role: "student"
+      }
+    });
+
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
 };
 
-// ✅ Verify student email with OTP
-export const verifyStudentEmail = async (req, res) => {
+// ✅ Verify student OTP
+export const verifyStudentOtp = async (req, res) => {
   try {
     const { email, code } = req.body;
     if (!email || !code) {
@@ -128,49 +128,80 @@ export const verifyStudentEmail = async (req, res) => {
     const student = await Student.findOne({ email });
     if (!student) return res.status(404).json({ message: "Student not found" });
 
-    if (student.isEmailVerified) {
+    if (student.isVerified) {
       return res.status(200).json({ message: "Email already verified" });
     }
 
-    if (!student.emailVerificationCode || !student.emailVerificationExpires) {
+    if (!student.otp || !student.otpExpiry) {
       return res.status(400).json({ message: "No verification code found. Please sign up again." });
     }
 
-    if (student.emailVerificationExpires < new Date()) {
-      return res.status(400).json({ message: "Verification code has expired. Please sign up again." });
+    if (student.otpExpiry < new Date()) {
+      return res.status(400).json({ message: "Verification code has expired. Please request a new OTP." });
     }
 
-    if (student.emailVerificationCode !== code) {
+    if (student.otp !== code) {
       return res.status(400).json({ message: "Invalid verification code" });
     }
 
-    student.isEmailVerified = true;
-    student.emailVerificationCode = undefined;
-    student.emailVerificationExpires = undefined;
+    student.isVerified = true;
+    student.otp = undefined;
+    student.otpExpiry = undefined;
     await student.save();
 
     return res.status(200).json({ message: "Email verified successfully" });
   } catch (err) {
-    console.error("verifyStudentEmail error:", err);
+    console.error("verifyStudentOtp error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// ✅ Resend student OTP
+export const resendStudentOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const student = await Student.findOne({ email });
+    if (!student) return res.status(404).json({ message: "Student not found" });
+    if (student.isVerified) {
+      return res.status(200).json({ message: "Email already verified" });
+    }
+
+    const code = generateCode();
+    const expires = new Date(Date.now() + 5 * 60 * 1000);
+    student.otp = code;
+    student.otpExpiry = expires;
+    await student.save();
+
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (e) {
+      console.warn("⚠️ Failed to resend verification email to student:", e.message);
+    }
+
+    return res.status(200).json({ message: "A new OTP has been sent to your email." });
+  } catch (err) {
+    console.error("resendStudentOtp error:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get student notifications
 export const getNotifications = async (req, res) => {
-    try {
-        const { studentId } = req.query;
-        if (!studentId) return res.status(400).json({ message: "studentId query parameter is required" });
+  try {
+    const { studentId } = req.query;
+    if (!studentId) return res.status(400).json({ message: "studentId query parameter is required" });
 
-        const student = await Student.findById(studentId).lean();
-        if (!student) return res.status(404).json({ message: "Student not found" });
+    const student = await Student.findById(studentId).lean();
+    if (!student) return res.status(404).json({ message: "Student not found" });
 
-        const notifications = (student.notifications || []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-        res.status(200).json({ notifications });
-    } catch (err) {
-        console.error("❌ Error fetching notifications:", err);
-        res.status(500).json({ message: "Error fetching notifications" });
-    }
+    const notifications = (student.notifications || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.status(200).json({ notifications });
+  } catch (err) {
+    console.error("❌ Error fetching notifications:", err);
+    res.status(500).json({ message: "Error fetching notifications" });
+  }
 };
 
 

@@ -29,6 +29,11 @@ const PaymentPage = () => {
     fetchOffer();
   }, [offerId]);
 
+  const isValidPayment = (val) => {
+    const num = Number(val);
+    return !isNaN(num) && num >= 300 && num <= 3000;
+  };
+
   const PaymentCardForm = () => {
     const stripe = useStripe();
     const elements = useElements();
@@ -36,6 +41,7 @@ const PaymentPage = () => {
 
     const handleCardPay = async () => {
       if (!offer) return;
+      if (!isValidPayment(amount)) return alert('Amount must be between 300 and 3000');
       if (Number(amount) !== Number(offer.offeredAmount)) return alert(`Please pay the exact amount: PKR ${offer.offeredAmount}`);
       if (!stripe || !elements) return alert('Stripe not ready');
 
@@ -125,6 +131,7 @@ const PaymentPage = () => {
 
   const handlePay = async () => {
     if (!offer) return;
+    if (!isValidPayment(amount)) return alert('Amount must be between 300 and 3000');
     if (Number(amount) !== Number(offer.offeredAmount)) return alert(`Please pay the exact amount: PKR ${offer.offeredAmount}`);
     try {
       setLoading(true);

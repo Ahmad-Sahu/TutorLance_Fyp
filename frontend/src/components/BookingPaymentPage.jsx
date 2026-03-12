@@ -19,9 +19,18 @@ const BookingPaymentForm = ({ booking, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const isValidPayment = (val) => {
+    const num = Number(val);
+    return !isNaN(num) && num >= 300 && num <= 3000;
+  };
+
   const handlePay = async (e) => {
     e.preventDefault();
     if (!booking || !stripe || !elements) return;
+    if (!isValidPayment(booking.proposedPrice)) {
+      setError("Amount must be between 300 and 3000");
+      return;
+    }
     setLoading(true);
     setError("");
 

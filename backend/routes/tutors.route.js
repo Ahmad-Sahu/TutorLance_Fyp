@@ -10,14 +10,15 @@
 // export default router;
 
 import express from "express";
-import { tutorLogin, tutorSignup, getTutorProfile, getPublicTutorProfile, getTutors, updateTutorProfile, getTutorBookings, getPublicBookingsForTutor, updateBookingStatus, createSession, markSessionDone, withdrawEarnings, negotiateBooking, verifyTutorEmail } from "../controllers/tutors.controller.js";
+import { tutorLogin, tutorSignup, getTutorProfile, getPublicTutorProfile, getTutors, updateTutorProfile, getTutorBookings, getPublicBookingsForTutor, updateBookingStatus, createSession, markSessionDone, withdrawEarnings, negotiateBooking, verifyTutorOtp, resendTutorOtp } from "../controllers/tutors.controller.js";
 import { authenticateTutor } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // Tutor Signup Route
 router.post("/signup", tutorSignup);
-router.post("/verify-email", verifyTutorEmail);
+router.post("/verify-otp", verifyTutorOtp);
+router.post("/resend-otp", resendTutorOtp);
 
 // Tutor Login Route
 router.post("/login", tutorLogin);
@@ -28,17 +29,18 @@ router.get("/profile", authenticateTutor, getTutorProfile);
 // Update Tutor Profile
 router.put("/profile", authenticateTutor, updateTutorProfile);
 
+
+// Get tutor bookings (STATIC, must be before dynamic :id)
+router.get("/bookings", authenticateTutor, getTutorBookings);
+
+// Public bookings for tutor by id (no auth) - useful as fallback
+router.get("/:id/bookings-public", getPublicBookingsForTutor);
+
 // Get all tutors with filters
 router.get("/", getTutors);
 
 // Get single tutor profile (public)
 router.get("/:id", getPublicTutorProfile);
-
-// Get tutor bookings
-router.get("/bookings", authenticateTutor, getTutorBookings);
-
-// Public bookings for tutor by id (no auth) - useful as fallback
-router.get("/:id/bookings-public", getPublicBookingsForTutor);
 
 // Negotiate booking (counter offer)
 router.put("/booking/:id/negotiate", authenticateTutor, negotiateBooking);

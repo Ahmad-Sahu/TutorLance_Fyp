@@ -48,12 +48,21 @@ function FindTutors() {
         'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
     ];
 
+    // Helper: convert array or string to comma-separated string
+    const toCommaString = (val) => Array.isArray(val) ? val.join(",") : val;
+
     const fetchTutors = async () => {
         setLoading(true);
         try {
             const queryParams = new URLSearchParams();
 
-            Object.entries(filters).forEach(([key, value]) => {
+            // For multi-select filters, ensure comma-separated string
+            const filterKeys = Object.keys(filters);
+            filterKeys.forEach((key) => {
+                let value = filters[key];
+                if (['specialities', 'languages', 'availability'].includes(key) && Array.isArray(value)) {
+                    value = value.join(",");
+                }
                 if (value && value.trim() !== '') {
                     queryParams.append(key, value);
                 }
@@ -64,7 +73,8 @@ function FindTutors() {
                 queryParams.set('subject', queryParams.get('subject'));
             }
             const response = await axios.get(`http://localhost:3000/api/v1/tutors?${queryParams}`);
-            setTutors(response.data.tutors || []);
+            // Only show tutors with profileCompleted true (should be enforced by backend, but double check)
+            setTutors((response.data.tutors || []).filter(t => t.profileCompleted));
         } catch (error) {
             console.error('Error fetching tutors:', error);
             toast.error('Failed to fetch tutors');
@@ -78,6 +88,7 @@ function FindTutors() {
     }, [filters]);
 
     const handleFilterChange = (field, value) => {
+        // For multi-select, allow array or comma string
         setFilters(prev => ({
             ...prev,
             [field]: value

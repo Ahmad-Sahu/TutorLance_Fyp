@@ -57,14 +57,14 @@ const tutorSchema = new mongoose.Schema({
     required: true,
   },
   // Email verification
-  isEmailVerified: {
+  isVerified: {
     type: Boolean,
     default: false,
   },
-  emailVerificationCode: {
+  otp: {
     type: String,
   },
-  emailVerificationExpires: {
+  otpExpiry: {
     type: Date,
   },
   subjects: [{

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Users, BookOpen, DollarSign, Briefcase, UserCheck, MessageSquare, Star } from "lucide-react";
+import { Users, BookOpen, DollarSign, Briefcase, UserCheck, MessageSquare, Star, Bell } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "react-hot-toast";
 
@@ -10,6 +10,8 @@ const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("
 const COLORS = ["#4F46E5", "#22C55E", "#EAB308", "#EF4444", "#3B82F6", "#8B5CF6"];
 
 const AdminDashboard = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [unseenCount, setUnseenCount] = useState(0);
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [stats, setStats] = useState({ tutors: 0, students: 0, freelancers: 0, bookings: 0, completedBookings: 0, totalPayments: 0 });
@@ -21,6 +23,7 @@ const AdminDashboard = () => {
   const [tutorsWithRatings, setTutorsWithRatings] = useState([]);
   const [bookingStatusFilter, setBookingStatusFilter] = useState("");
   const [complaintResponse, setComplaintResponse] = useState({});
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -44,6 +47,28 @@ const AdminDashboard = () => {
         setTutors(r.data.tutors || []);
         setStudents(r.data.students || []);
         setFreelancers(r.data.freelancers || []);
+    // Fetch notifications (simulate live with polling)
+    useEffect(() => {
+      let interval;
+      const fetchNotifications = async () => {
+        try {
+          const r = await axios.get(`${API}/admin/notifications`, auth());
+          setNotifications(r.data.notifications || []);
+          setUnseenCount((r.data.notifications || []).filter(n => !n.seen).length);
+        } catch {}
+      };
+      fetchNotifications();
+      interval = setInterval(fetchNotifications, 5000); // Poll every 5s
+      return () => clearInterval(interval);
+    }, []);
+
+    const markAllSeen = async () => {
+      try {
+        await axios.post(`${API}/admin/notifications/mark-seen`, {}, auth());
+        setNotifications((prev) => prev.map(n => ({ ...n, seen: true })));
+        setUnseenCount(0);
+      } catch {}
+    };
       }).catch(() => {});
     }
   }, [activeSection]);
@@ -128,7 +153,9 @@ const AdminDashboard = () => {
   return (
     <div className="flex min-h-screen bg-slate-100 text-gray-900 relative z-0 isolate">
       <aside className="w-64 bg-indigo-700 text-white flex flex-col p-6 shrink-0 relative z-10">
-        <h1 className="text-2xl font-bold mb-6">TutorLance Admin</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">TutorLance Admin</h1>
+        </div>
         <nav className="space-y-1">
           {[
             ["dashboard", "Dashboard", <Users className="w-5 h-5" />],
@@ -142,10 +169,27 @@ const AdminDashboard = () => {
             </button>
           ))}
         </nav>
+
         <button type="button" onClick={() => { localStorage.removeItem("token"); navigate("/login"); }} className="mt-6 text-red-300 hover:text-white cursor-pointer">Logout</button>
       </aside>
 
       <main className="flex-1 p-8 overflow-y-auto relative z-10">
+        {/* Small Notification Button, always visible */}
+        <div className="flex justify-end mb-4">
+          <button
+            type="button"
+            className="relative flex items-center justify-center bg-transparent hover:bg-indigo-100 rounded-full p-2 focus:outline-none"
+            onClick={() => setShowNotifications((prev) => !prev)}
+            aria-label="Show Notifications"
+          >
+            <Bell className="w-6 h-6 text-indigo-700" />
+            {unseenCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold animate-pulse border-2 border-white">
+                {unseenCount}
+              </span>
+            )}
+          </button>
+        </div>
         {activeSection === "dashboard" && (
           <>
             <h1 className="text-3xl font-bold mb-8 text-indigo-700">Dashboard</h1>
@@ -156,7 +200,7 @@ const AdminDashboard = () => {
                 { label: "Freelancers", value: stats.freelancers, icon: <Briefcase className="text-yellow-500" /> },
                 { label: "Bookings", value: stats.bookings, icon: <UserCheck className="text-blue-500" /> },
                 { label: "Completed Sessions", value: stats.completedBookings, icon: <DollarSign className="text-pink-500" /> },
-                { label: "Total Payments (PKR)", value: stats.totalPayments, icon: <DollarSign className="text-purple-600" /> },
+                { label: "Total Payments (PKR)", value: stats.totalPayments },
               ].map((item, idx) => (
                 <div key={idx} className="bg-white p-6 rounded-xl shadow flex justify-between items-center">
                   <div><h2 className="text-gray-600 font-medium">{item.label}</h2><p className="text-2xl font-bold">{item.value}</p></div>
@@ -286,7 +330,7 @@ const AdminDashboard = () => {
         {activeSection === "ratings" && (
           <>
             <h1 className="text-3xl font-bold mb-6">Ratings & Reviews</h1>
-            <div className="space-y-4">
+            <div className="space-y-4 mb-10">
               {tutorsWithRatings.length === 0 ? <p className="text-gray-500">No tutors.</p> : tutorsWithRatings.map((t) => (
                 <div key={t._id} className="bg-white rounded-xl shadow p-4">
                   <p className="font-semibold">{t.firstName} {t.lastName} — ⭐ {t.averageRating?.toFixed(1) || "0"} ({t.totalReviews || 0} reviews)</p>
@@ -300,6 +344,7 @@ const AdminDashboard = () => {
                 </div>
               ))}
             </div>
+
           </>
         )}
       </main>

@@ -78,7 +78,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { Freelancer } from "../models/freelancers.model.js";
-import { sendVerificationEmail } from "../utils/email.js";
+import { sendOtpEmail } from "../utils/send-email.js";
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 dotenv.config();
 
@@ -111,7 +111,7 @@ export const registerFreelancer = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const code = generateCode();
-    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    const expires = new Date(Date.now() + 5 * 60 * 1000);
 
     const newFreelancer = new Freelancer({
       firstname: firstName || name.split(" ")[0] || name,
@@ -121,21 +121,21 @@ export const registerFreelancer = async (req, res) => {
       password: hashedPassword,
       skills,
       experience,
-      isEmailVerified: false,
-      emailVerificationCode: code,
-      emailVerificationExpires: expires,
+      isVerified: false,
+      otp: code,
+      otpExpiry: expires,
     });
 
     await newFreelancer.save();
 
     try {
-      await sendVerificationEmail(email, code);
+      await sendOtpEmail(email, code);
     } catch (e) {
       console.warn("⚠️ Failed to send verification email to freelancer:", e.message);
     }
 
     // Return the created freelancer so frontend can redirect and store id
-    res.status(201).json({ message: "Freelancer registered. Please verify your email with the OTP sent.", freelancer: newFreelancer, requiresEmailVerification: true });
+    res.status(201).json({ message: "Freelancer registered. Please verify your email with the OTP sent.", freelancer: newFreelancer, requiresOtp: true });
   } catch (error) {
     console.error("❌ Register freelancer error:", error);
     res.status(500).json({ message: error.message });
@@ -151,7 +151,7 @@ export const loginFreelancer = async (req, res) => {
     const freelancer = await Freelancer.findOne({ email });
     if (!freelancer) return res.status(404).json({ message: "No freelancer found with this email. Please check your credentials or sign up first.", field: "email", role: "freelancer" });
 
-    if (!freelancer.isEmailVerified) {
+    if (!freelancer.isVerified) {
       return res.status(403).json({ message: "Please verify your email before logging in.", field: "email", role: "freelancer" });
     }
 
@@ -174,8 +174,8 @@ export const loginFreelancer = async (req, res) => {
   }
 };
 
-// ✅ Verify freelancer email with OTP
-export const verifyFreelancerEmail = async (req, res) => {
+// ✅ Verify freelancer OTP
+export const verifyFreelancerOtp = async (req, res) => {
   try {
     const { email, code } = req.body;
     if (!email || !code) {
@@ -185,30 +185,61 @@ export const verifyFreelancerEmail = async (req, res) => {
     const freelancer = await Freelancer.findOne({ email });
     if (!freelancer) return res.status(404).json({ message: "Freelancer not found" });
 
-    if (freelancer.isEmailVerified) {
+    if (freelancer.isVerified) {
       return res.status(200).json({ message: "Email already verified" });
     }
 
-    if (!freelancer.emailVerificationCode || !freelancer.emailVerificationExpires) {
+    if (!freelancer.otp || !freelancer.otpExpiry) {
       return res.status(400).json({ message: "No verification code found. Please sign up again." });
     }
 
-    if (freelancer.emailVerificationExpires < new Date()) {
-      return res.status(400).json({ message: "Verification code has expired. Please sign up again." });
+    if (freelancer.otpExpiry < new Date()) {
+      return res.status(400).json({ message: "Verification code has expired. Please request a new OTP." });
     }
 
-    if (freelancer.emailVerificationCode !== code) {
+    if (freelancer.otp !== code) {
       return res.status(400).json({ message: "Invalid verification code" });
     }
 
-    freelancer.isEmailVerified = true;
-    freelancer.emailVerificationCode = undefined;
-    freelancer.emailVerificationExpires = undefined;
+    freelancer.isVerified = true;
+    freelancer.otp = undefined;
+    freelancer.otpExpiry = undefined;
     await freelancer.save();
 
     return res.status(200).json({ message: "Email verified successfully" });
   } catch (err) {
-    console.error("verifyFreelancerEmail error:", err);
+    console.error("verifyFreelancerOtp error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// ✅ Resend freelancer OTP
+export const resendFreelancerOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const freelancer = await Freelancer.findOne({ email });
+    if (!freelancer) return res.status(404).json({ message: "Freelancer not found" });
+    if (freelancer.isVerified) {
+      return res.status(200).json({ message: "Email already verified" });
+    }
+
+    const code = generateCode();
+    const expires = new Date(Date.now() + 5 * 60 * 1000);
+    freelancer.otp = code;
+    freelancer.otpExpiry = expires;
+    await freelancer.save();
+
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (e) {
+      console.warn("⚠️ Failed to resend verification email to freelancer:", e.message);
+    }
+
+    return res.status(200).json({ message: "A new OTP has been sent to your email." });
+  } catch (err) {
+    console.error("resendFreelancerOtp error:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

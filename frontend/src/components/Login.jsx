@@ -28,13 +28,27 @@ function Login() {
         e.preventDefault();
         setErrorMessage(""); // Clear previous errors
 
+
         // Validate inputs
         if (!email || !password) {
             const missingField = !email ? "Email" : "Password";
             setErrorMessage(`${missingField} is required.`);
             return;
         }
-
+        // Password: no only spaces, allow spaces only between words, max 20 words
+        const trimmedPassword = password.trim();
+        if (!trimmedPassword) {
+            setErrorMessage("Password cannot be empty or only spaces.");
+            return;
+        }
+        if (/  +/.test(trimmedPassword)) {
+            setErrorMessage("Password cannot have multiple consecutive spaces.");
+            return;
+        }
+        if (trimmedPassword.split(' ').length > 20) {
+            setErrorMessage("Password cannot exceed 20 words.");
+            return;
+        }
         if (password.length < 6) {
             setErrorMessage("Password must be at least 6 characters long.");
             return;

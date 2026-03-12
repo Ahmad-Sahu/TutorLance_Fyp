@@ -21,7 +21,19 @@ const StudentProfileSection = ({ student }) => {
     const [profilePicturePreview, setProfilePicturePreview] = useState(student?.profilePicture || '');
     const [loading, setLoading] = useState(false);
 
+    // Strict text validation: only spaces between words, no leading/trailing/multiple spaces, max 20 words
+    const isValidText = (val) => {
+        if (!val) return false;
+        const trimmed = val.trim();
+        if (!trimmed) return false;
+        if (/  +/.test(trimmed)) return false;
+        if (!/^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/.test(trimmed)) return false;
+        if (trimmed.split(' ').length > 20) return false;
+        return true;
+    };
     const handleInputChange = (field, value) => {
+        // For name fields, disallow spaces-only
+        if ((field === 'firstName' || field === 'lastName') && !isValidText(value)) return;
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -58,15 +70,16 @@ const StudentProfileSection = ({ student }) => {
     };
 
     const handleSave = async () => {
+        // Validate names
+        if (!isValidText(formData.firstName)) return toast.error('First name required (no spaces only, max 20 words)');
+        if (!isValidText(formData.lastName)) return toast.error('Last name required (no spaces only, max 20 words)');
         setLoading(true);
         try {
             let profilePictureUrl = student?.profilePicture;
-
             // Upload new profile picture if selected (Cloudinary)
             if (formData.profilePicture) {
                 profilePictureUrl = await handleCloudinaryUpload(formData.profilePicture);
             }
-
             const token = localStorage.getItem('token');
             const response = await fetch('http://localhost:3000/api/v1/students/profile', {
                 method: 'PUT',
@@ -81,7 +94,6 @@ const StudentProfileSection = ({ student }) => {
                     profilePicture: profilePictureUrl
                 })
             });
-
             const data = await response.json();
             if (response.ok) {
                 toast.success('Profile updated successfully!');
@@ -89,7 +101,7 @@ const StudentProfileSection = ({ student }) => {
                 // Update local storage
                 const updatedStudent = { ...student, ...data.student };
                 localStorage.setItem('student', JSON.stringify(updatedStudent));
-                window.location.reload(); // Refresh to show updated data
+                // Do not reload, stay on same page
             } else {
                 toast.error(data.message || 'Failed to update profile');
             }

@@ -20,7 +20,8 @@ import {
   addOrder,
   getFreelancerDashboard,
   getRandomFreelancers,
-  verifyFreelancerEmail,
+  verifyFreelancerOtp,
+  resendFreelancerOtp,
 } from "../controllers/freelancers.controller.js";
 
 const router = express.Router();
@@ -28,7 +29,8 @@ const router = express.Router();
 // Authentication
 router.post("/register", registerFreelancer);
 router.post("/login", loginFreelancer);
-router.post("/verify-email", verifyFreelancerEmail);
+router.post("/verify-otp", verifyFreelancerOtp);
+router.post("/resend-otp", resendFreelancerOtp);
 
 // Profile
 router.get("/:id", getFreelancerProfile);

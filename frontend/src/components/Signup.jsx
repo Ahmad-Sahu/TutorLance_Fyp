@@ -24,20 +24,47 @@ function Signup() {
 
     const navigate = useNavigate();
 
-    const nameRegex = /^[A-Za-z ]+$/;
+
+    // Helper: allow only spaces between words, no leading/trailing/multiple spaces, max 20 words
+    const isValidName = (val) => {
+        if (!val) return false;
+        const trimmed = val.trim();
+        if (!trimmed) return false;
+        // No multiple consecutive spaces
+        if (/  +/.test(trimmed)) return false;
+        // Only letters and single spaces between words
+        if (!/^[A-Za-z]+( [A-Za-z]+)*$/.test(trimmed)) return false;
+        // Max 20 words
+        if (trimmed.split(' ').length > 20) return false;
+        return true;
+    };
+    // Helper: password max 20 words, no only spaces
+    const isValidPassword = (val) => {
+        if (!val) return false;
+        const trimmed = val.trim();
+        if (!trimmed) return false;
+        if (/  +/.test(trimmed)) return false;
+        if (trimmed.split(' ').length > 20) return false;
+        return true;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Validate names: only English letters and spaces
-        if (!nameRegex.test(firstName)) {
-            setErrorMessage("First name must contain only English letters.");
+        // Validate first name
+        if (!isValidName(firstName)) {
+            setErrorMessage("First name must be 1-20 words, only letters, no leading/trailing/multiple spaces.");
             return;
         }
-        if (!nameRegex.test(lastName)) {
-            setErrorMessage("Last name must contain only English letters.");
+        // Validate last name
+        if (!isValidName(lastName)) {
+            setErrorMessage("Last name must be 1-20 words, only letters, no leading/trailing/multiple spaces.");
             return;
         }
-        console.log("Signing up as:", role, firstName, lastName, email, password);
-
+        // Validate password
+        if (!isValidPassword(password)) {
+            setErrorMessage("Password must be 1-20 words, no leading/trailing/multiple spaces.");
+            return;
+        }
         // Validate passwords match
         if (password !== confirmPassword) {
             setErrorMessage("Passwords do not match.");
@@ -75,9 +102,13 @@ function Signup() {
             console.log("Signup successful", response.data);
             toast.success(response.data.message || "Signup successful");
 
-            // After successful signup, redirect to login for authentication
-            // Users need to login to get their token and access the dashboard
-            navigate("/login");
+            // If backend indicates OTP verification is required, send user to OTP page
+            if (response.data.requiresOtp) {
+                navigate("/verify-otp", { state: { email, role } });
+            } else {
+                // Fallback: go to login
+                navigate("/login");
+            }
         } catch (error) {
             // Step 4: Handle errors
             if (error.response) {
@@ -162,7 +193,7 @@ function Signup() {
                         >
                             <option value="tutor">Tutor</option>
                             <option value="student">Student</option>
-                            <option value="admin">Admin</option>
+                            {/* <option value="admin">Admin</option> */}
                             <option value="freelancer">Freelancer</option>
                         </select>
 

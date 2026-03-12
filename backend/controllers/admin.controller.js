@@ -6,48 +6,91 @@ import {Booking} from '../models/Booking.model.js';
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {z} from "zod";
+import { sendOtpEmail } from "../utils/send-email.js";
 
-
+const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const signup = async (req, res) => {
-    const { firstName, lastName, email, password } = req.body;
-    const role = 'admin';
+  const { firstName, lastName, email, password } = req.body;
+  const role = 'admin';
 
-    const signupSchema = z.object({
+  const signupSchema = z.object({
     firstName: z.string().min(2, { message: "First name must be at least 2 characters long" }).max(100),
     lastName: z.string().min(2, { message: "Last name must be at least 2 characters long" }).max(100),
     email: z.string().email({ message: "Invalid email format" }),
     password: z.string().min(6, { message: "Password must be at least 6 characters long" }).max(100)
-});
+  });
 
-const validation = signupSchema.safeParse({ firstName, lastName, email, password });
-    if (!validation.success) {
-        return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
+  const validation = signupSchema.safeParse({ firstName, lastName, email, password });
+  if (!validation.success) {
+    return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
+  }
+
+  try {
+    const existingAdmin = await Admin.findOne({ email });
+    if (existingAdmin) {
+      return res.status(400).json({ message: "Admin already exists" });
     }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const code = generateCode();
+    const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    const newAdmin = new Admin({
+      role,
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      isVerified: false,
+      otp: code,
+      otpExpiry: expires,
+    });
+
+    await newAdmin.save();
 
     try {
-        const existingAdmin = await Admin.findOne({ email : email });
-        if (existingAdmin) {
-            return res.status(400).json({ message: "Admin already exists" });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newAdmin = new Admin({
-            role,
-            firstName,
-            lastName,
-            email,
-            password : hashedPassword
-        });
-
-        await newAdmin.save();
-        return res.status(201).json({ message: "Admin registered successfully" });
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
+      await sendOtpEmail(email, code);
+    } catch (e) {
+      console.warn("⚠️ Failed to send verification email to admin:", e.message);
     }
-}
+
+    return res.status(201).json({ message: "Admin registered. Please verify your email with the OTP sent.", admin: newAdmin, requiresOtp: true });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Admin OTP verification endpoint
+export const verifyAdminOtp = async (req, res) => {
+  const { email, otp } = req.body;
+  try {
+    const admin = await Admin.findOne({ email });
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+    if (admin.isVerified) {
+      return res.status(400).json({ message: "Admin already verified" });
+    }
+    if (!admin.otp || !admin.otpExpiry) {
+      return res.status(400).json({ message: "OTP not set. Please register again." });
+    }
+    if (admin.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+    if (admin.otpExpiry < new Date()) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+    admin.isVerified = true;
+    admin.otp = null;
+    admin.otpExpiry = null;
+    await admin.save();
+    return res.status(200).json({ message: "Admin email verified successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 export const login = async (req, res) => {
     const { email, password } = req.body;

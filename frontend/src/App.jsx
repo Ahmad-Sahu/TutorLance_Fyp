@@ -15,6 +15,7 @@ import BookingPaymentPage from './components/BookingPaymentPage'
 import TutorProfileForm from './components/TutorProfileForm'
 import FindTutors from './components/FindTutors'
 import TutorProfileView from './components/TutorProfileView'
+import OtpVerification from './components/OtpVerification'
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
       <Route path='/' element={<Home/>}/>
       <Route path='/login' element={<Login/>}/>
       <Route path='/signup' element={<Signup/>}/>
+      <Route path='/verify-otp' element={<OtpVerification />} />
       <Route path='/find-tutors' element={<FindTutors/>}/>
       <Route path='/tutor/:tutorId' element={<TutorProfileView/>}/>
       <Route path='/studentdashboard' element={<StudentDashboard/>}/>

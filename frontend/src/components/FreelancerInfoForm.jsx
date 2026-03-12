@@ -15,6 +15,8 @@ const FreelancerInfoForm = () => {
     dob: "",
     cnicNumber: "",
     domain: "",
+    skills: "",
+    status: "Available",
     description: "",
     youtubeUrl: "",
   });
@@ -71,12 +73,49 @@ const FreelancerInfoForm = () => {
     return isoDate;
   };
 
-  const nameRegex = /^[A-Za-z ]+$/;
+
+  // Helper: allow only spaces between words, no leading/trailing/multiple spaces, max 20 words
+  // Strict text validation: only spaces between words, no leading/trailing/multiple spaces, max 20 words
+  const isValidText = (val) => {
+    if (!val) return false;
+    const trimmed = val.trim();
+    if (!trimmed) return false;
+    if (/  +/.test(trimmed)) return false;
+    if (!/^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/.test(trimmed)) return false;
+    if (trimmed.split(' ').length > 20) return false;
+    return true;
+  };
+  // Payment validation helper (for later reuse)
+  const isValidPayment = (val) => {
+    const num = Number(val);
+    return !isNaN(num) && num >= 300 && num <= 3000;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validate name: only English letters and spaces
-    if (!nameRegex.test(form.name)) {
-      alert("Name must contain only English letters.");
+    // Validate all text fields
+    if (!isValidText(form.name)) {
+      alert("Name must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
+      setSubmitting(false);
+      return;
+    }
+    if (!isValidText(form.domain)) {
+      alert("Domain must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
+      setSubmitting(false);
+      return;
+    }
+    if (form.skills && !isValidText(form.skills)) {
+      alert("Skills must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
+      setSubmitting(false);
+      return;
+    }
+    if (!isValidText(form.cnicNumber)) {
+      alert("CNIC Number must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
+      setSubmitting(false);
+      return;
+    }
+    if (form.description && !isValidText(form.description)) {
+      alert("Description must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
       setSubmitting(false);
       return;
     }
@@ -109,10 +148,10 @@ const FreelancerInfoForm = () => {
         cnicNumber: form.cnicNumber,
         cnicImage: cnicImageUrl,
         domain: form.domain,
+        skills: form.skills,
+        status: form.status,
         description: form.description,
         youtubeUrl: form.youtubeUrl,
-        // also set skills for matching (keep consistent with existing matching logic)
-        skills: form.domain,
       };
 
       const response = await axios.put(`http://localhost:3000/api/v1/freelancers/${freelancerId}`, payload);
@@ -122,9 +161,8 @@ const FreelancerInfoForm = () => {
         localStorage.setItem("freelancer", JSON.stringify(response.data));
       }
 
-      toast.success("Profile saved. Redirecting to dashboard...");
+      toast.success("Profile saved.");
       localStorage.setItem("freelancerProfileCompleted", "true");
-      navigate("/freelancerdashboard");
     } catch (err) {
       console.error("Error saving freelancer profile:", err);
       alert("Failed to save profile. Check console for details.");
@@ -162,21 +200,22 @@ const FreelancerInfoForm = () => {
           <input type="file" accept="image/*" onChange={(e) => setCnicFile(e.target.files[0])} />
         </div>
 
+
         <div>
           <label className="block font-semibold">Domain</label>
-          <select name="domain" value={form.domain} onChange={handleChange} className="w-full border rounded p-2" required>
-            <option value="">Select Domain</option>
-            <option value="Flutter">Flutter</option>
-            <option value="Web Development">Web Development</option>
-            <option value="UI/UX">UI/UX</option>
-            <option value="Python">Python</option>
-            <option value="Mobile Development">Mobile Development</option>
-            <option value="Data Science">Data Science</option>
-            <option value="Machine Learning">Machine Learning</option>
-            <option value="JavaScript">JavaScript</option>
-            <option value="Java">Java</option>
-            <option value="C++">C++</option>
-            <option value="Other">Other</option>
+          <input name="domain" value={form.domain} onChange={handleChange} className="w-full border rounded p-2" required />
+        </div>
+
+        <div>
+          <label className="block font-semibold">Skills</label>
+          <input name="skills" value={form.skills} onChange={handleChange} className="w-full border rounded p-2" required />
+        </div>
+
+        <div>
+          <label className="block font-semibold">Status</label>
+          <select name="status" value={form.status} onChange={handleChange} className="w-full border rounded p-2" required>
+            <option value="Available">Available</option>
+            <option value="Busy">Busy</option>
           </select>
         </div>
 

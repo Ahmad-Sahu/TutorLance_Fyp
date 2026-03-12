@@ -67,14 +67,14 @@ const freelancerSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   // Email verification
-  isEmailVerified: {
+  isVerified: {
     type: Boolean,
     default: false,
   },
-  emailVerificationCode: {
+  otp: {
     type: String,
   },
-  emailVerificationExpires: {
+  otpExpiry: {
     type: Date,
   },
   // Primary domain or skills (used for matching student gigs)

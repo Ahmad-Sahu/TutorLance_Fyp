@@ -13,6 +13,9 @@ import paymentRoutes from './routes/payment.route.js';
 import bookingsRoutes from './routes/bookings.route.js';
 import complaintRoutes from './routes/complaint.route.js';
 
+import dns from 'dns';
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
+
 dotenv.config()
 
 const app = express()
@@ -62,7 +65,10 @@ const start = async () => {
   console.log(`Starting backend. PORT=${port}, MONGO_URI=${!!DB_URI}, STRIPE=${!!process.env.STRIPE_SECRET_KEY}`);
   try {
     if (DB_URI) {
-      await mongoose.connect(DB_URI);
+      await mongoose.connect(DB_URI, {
+        //useNewUrlParser: true,
+        // useUnifiedTopology: true
+      });
       console.log("Connected to MongoDB successfully");
     } else {
       console.warn("⚠️ MONGO_URI not set. Server will run but database operations will fail.");
