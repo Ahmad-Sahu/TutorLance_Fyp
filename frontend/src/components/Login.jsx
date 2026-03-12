@@ -177,7 +177,7 @@ function Login() {
                 <div className='flex items-center justify-between'>
                     <a className='flex items-center mr-8 font-semibold' href="">English <span className='text-4xl ml-2 font-bold'><MdExpandMore /></span></a>
                     <Link to="/login"><button className='flex 0 text-black py-3 px-6 border-4 border-black rounded-full font-semibold'>
-                        <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login</button></Link>
+                        <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login/Signup</button></Link>
                 </div>
 
             </div>
@@ -331,7 +331,7 @@ function Login() {
                     {/* Sign Up Link */}
                     <p className="text-center mt-4 text-sm">
                         Don’t have an account?{" "}
-                        <Link to="/signup" className="text-blue-700 underline">
+                        <Link to="/signup" className="text-blue-700 font-semibold underline">
                             Sign up
                         </Link>
                     </p>
