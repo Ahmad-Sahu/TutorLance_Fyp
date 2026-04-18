@@ -18,7 +18,11 @@ const StudentBookingOffers = ({ studentId }) => {
   const [negotiationPrice, setNegotiationPrice] = useState({});
   const navigate = useNavigate();
 
+
   useEffect(() => {
+    // Load from cache first for instant display
+    const cached = localStorage.getItem('studentNegotiationOffers');
+    if (cached) setBookings(JSON.parse(cached));
     fetchBookings();
   }, [studentId]);
 
@@ -27,9 +31,13 @@ const StudentBookingOffers = ({ studentId }) => {
     try {
       const res = await axios.get(`${API}/students/bookings`, authHeaders());
       setBookings(res.data.bookings || []);
+      localStorage.setItem('studentNegotiationOffers', JSON.stringify(res.data.bookings || []));
     } catch (err) {
       toast.error("Error fetching bookings");
-      setBookings([]);
+      // On error, load from cache if available
+      const cached = localStorage.getItem('studentNegotiationOffers');
+      if (cached) setBookings(JSON.parse(cached));
+      else setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -96,7 +104,7 @@ const StudentBookingOffers = ({ studentId }) => {
   };
 
   const relevant = (bookings || []).filter(
-    (b) => b.status === "pending" || b.status === "negotiating"
+    (b) => b.status === "pending" || b.status === "negotiating" || b.status === "accepted"
   );
 
   if (loading) {

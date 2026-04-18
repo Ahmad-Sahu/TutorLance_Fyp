@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { Booking } from '../models/Booking.model.js';
+import { Tutor } from '../models/tutors.model.js';
 
 // Safely initialize Stripe so backend can run even if key is missing
 let stripe = null;
@@ -143,9 +144,32 @@ export const releasePayment = async (req, res) => {
     }
 
     if (booking.paymentIntentId) {
+      // Fetch the PaymentIntent from Stripe
+      const paymentIntent = await stripe.paymentIntents.retrieve(booking.paymentIntentId);
+
+      if (paymentIntent.status === 'succeeded') {
+        // Already captured, just update DB if needed
+        booking.paymentStatus = 'released';
+        await booking.save();
+        // Update tutor earnings
+        const tutor = await Tutor.findById(booking.tutorId);
+        if (tutor) {
+          tutor.earnings += booking.proposedPrice;
+          await tutor.save();
+        }
+        return res.status(200).json({ message: "Payment already released" });
+      }
+
+      // Only capture if not already captured
       await stripe.paymentIntents.capture(booking.paymentIntentId);
       booking.paymentStatus = 'released';
       await booking.save();
+      // Update tutor earnings
+      const tutor = await Tutor.findById(booking.tutorId);
+      if (tutor) {
+        tutor.earnings += booking.proposedPrice;
+        await tutor.save();
+      }
     }
 
     res.status(200).json({ message: "Payment released" });

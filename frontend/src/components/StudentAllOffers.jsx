@@ -11,7 +11,11 @@ const StudentAllOffers = ({ studentId }) => {
   const [negotiating, setNegotiating] = useState({});
   const navigate = useNavigate();
 
+
   useEffect(() => {
+    // Load from cache first for instant display
+    const cached = localStorage.getItem('studentGigOffers');
+    if (cached) setOffers(JSON.parse(cached));
     fetchOffers();
     // eslint-disable-next-line
   }, [studentId]);
@@ -20,9 +24,14 @@ const StudentAllOffers = ({ studentId }) => {
     setLoading(true);
     try {
       const res = await axios.get(`http://localhost:3000/api/v1/gig-offers/student?studentId=${studentId}`);
-      setOffers(res.data && Array.isArray(res.data) ? res.data : res.data.offers || []);
+      const offers = res.data && Array.isArray(res.data) ? res.data : res.data.offers || [];
+      setOffers(offers);
+      localStorage.setItem('studentGigOffers', JSON.stringify(offers));
     } catch (err) {
       toast.error("Error fetching offers");
+      // On error, load from cache if available
+      const cached = localStorage.getItem('studentGigOffers');
+      if (cached) setOffers(JSON.parse(cached));
     } finally {
       setLoading(false);
     }

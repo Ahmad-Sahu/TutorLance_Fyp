@@ -22,6 +22,7 @@ function Login() {
     const [forgotNewPassword, setForgotNewPassword] = useState("");
     const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
+    const [showVerify, setShowVerify] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -143,8 +144,18 @@ function Login() {
                 } else if (data.message) {
                     messages = data.message;
                 }
-                // Do NOT proceed with login on any error
-                setErrorMessage(messages);
+                // Check for unverified user error (customize this based on your backend message)
+                if (
+                  messages.toLowerCase().includes("not verified") ||
+                  messages.toLowerCase().includes("verify your email")
+                ) {
+                  setShowVerify(true);
+                  setErrorMessage(
+                    "You are not registered. Please register again and verify your email."
+                  );
+                } else {
+                  setErrorMessage(messages);
+                }
                 console.log("Login error:", error.response.status, messages);
                 // Clear password field on wrong credentials for security
                 if (data.field === "password") {
@@ -317,7 +328,18 @@ function Login() {
                             </div>
                         )}
 
-                        {errorMessage && <p className='text-red-500 text-sm mb-4 text-center'>{errorMessage}</p>}
+                                                {errorMessage && <p className='text-red-500 text-sm mb-4 text-center'>{errorMessage}</p>}
+                                                {showVerify && (
+                                                    <button
+                                                        type="button"
+                                                        className="w-full bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 mb-4"
+                                                        onClick={() => {
+                                                            navigate("/verify-otp", { state: { email, role } });
+                                                        }}
+                                                    >
+                                                        Verify
+                                                    </button>
+                                                )}
 
                         {/* Submit Button */}
                         <button

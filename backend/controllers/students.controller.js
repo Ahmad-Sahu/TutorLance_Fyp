@@ -449,17 +449,55 @@ export const markSessionDone = async (req, res) => {
     }
 
     booking.studentMarkedDone = true;
+    let paymentReleased = false;
+    let tutor = null;
     if (booking.tutorMarkedDone) {
       booking.status = 'completed';
       booking.sessionCompletedAt = new Date();
       // Release payment
       booking.paymentStatus = 'released';
-      const tutor = await Tutor.findById(booking.tutorId);
+      tutor = await Tutor.findById(booking.tutorId);
       tutor.earnings += booking.proposedPrice;
       tutor.deliveredSessions += 1;
       await tutor.save();
+      paymentReleased = true;
     }
     await booking.save();
+
+    // Notifications
+    if (paymentReleased) {
+      // Notify student
+      const student = await Student.findById(booking.studentId);
+      if (student) {
+        student.notifications.push({
+          message: `Payment for your session '${booking.subject}' has been released. Session marked as completed.`,
+          read: false,
+          createdAt: new Date()
+        });
+        await student.save();
+      }
+      // Notify tutor
+      if (tutor) {
+        tutor.notifications.push({
+          message: `Payment for session '${booking.subject}' has been released to your account. Session marked as completed.`,
+          read: false,
+          createdAt: new Date()
+        });
+        await tutor.save();
+      }
+      // Notify admin
+      const { Admin } = await import('../models/admin.model.js');
+      const admins = await Admin.find({});
+      for (const admin of admins) {
+        admin.notifications = admin.notifications || [];
+        admin.notifications.push({
+          message: `Payment for session '${booking.subject}' between student and tutor has been released.`,
+          read: false,
+          createdAt: new Date()
+        });
+        await admin.save();
+      }
+    }
 
     res.status(200).json({ message: "Session marked done", booking });
   } catch (error) {

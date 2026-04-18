@@ -190,10 +190,12 @@ const TutorDashboard = () => {
     }
   };
 
-  const pendingRequests = bookings.filter((b) => b.status === "pending");
-  const negotiating = bookings.filter((b) => b.status === "negotiating");
-  const queue = bookings.filter((b) => b.status === "confirmed" || b.paymentStatus === "captured" || b.status === "accepted");
-  const delivered = bookings.filter((b) => b.status === "completed");
+  // Only show bookings in requests if paymentStatus is 'pending' (not paid)
+  const pendingRequests = bookings.filter((b) => (b.status === "pending" || b.status === "accepted" || b.status === "negotiating") && (b.paymentStatus === 'pending' || !b.paymentStatus));
+  const negotiating = bookings.filter((b) => b.status === "negotiating" && (b.paymentStatus === 'pending' || !b.paymentStatus));
+  // Only show bookings in queue if paymentStatus is 'held', 'captured', or 'confirmed' (paid)
+  const queue = bookings.filter((b) => (b.status === "confirmed" || b.paymentStatus === "captured" || b.paymentStatus === 'held') && b.paymentStatus && b.paymentStatus !== 'pending');
+  const delivered = bookings.filter((b) => b.status === "completed" && b.studentMarkedDone && b.tutorMarkedDone && b.paymentStatus === 'released');
   const notifications = tutor?.notifications || [];
 
   if (loading) return <div className="p-8">Loading dashboard...</div>;
@@ -416,36 +418,42 @@ const TutorDashboard = () => {
                           {b.sessionLink && <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm">Join class link</a>}
                         </div>
                         <div className="flex flex-col gap-2">
-                          <div className="flex flex-wrap gap-2 items-center">
-                            <a
-                              href="https://meet.google.com/new"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded inline-flex items-center gap-2 text-sm font-medium"
-                            >
-                              Create Class (Google Meet)
-                            </a>
-                            <input
-                              type="url"
-                              placeholder="Paste meeting link and send to student"
-                              value={sessionLinkInput[b._id] || ""}
-                              onChange={(e) => setSessionLinkInput((p) => ({ ...p, [b._id]: e.target.value }))}
-                              className="border rounded px-3 py-2 w-72"
-                            />
-                            <input
-                              type="datetime-local"
-                              placeholder="Deadline"
-                              value={sessionDeadlineInput[b._id] || ""}
-                              onChange={(e) => setSessionDeadlineInput((p) => ({ ...p, [b._id]: e.target.value }))}
-                              className="border rounded px-3 py-2"
-                              title="Link expires after this time; student refunded if class not done"
-                            />
-                            <button onClick={() => sendSessionLink(b._id)} className="bg-indigo-600 text-white px-4 py-2 rounded">Send Link</button>
-                          </div>
-                          {b.sessionLinkDeadline && (
-                            <p className="text-xs text-gray-500">Deadline: {new Date(b.sessionLinkDeadline).toLocaleString()}. After this, link expires and payment may be refunded if class not completed.</p>
+                          {(b.status === 'completed' || (b.studentMarkedDone && b.tutorMarkedDone)) ? (
+                            <span className="bg-green-100 text-green-700 px-4 py-2 rounded font-semibold">Class Done</span>
+                          ) : (
+                            <>
+                              <div className="flex flex-wrap gap-2 items-center">
+                                <a
+                                  href="https://meet.google.com/new"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded inline-flex items-center gap-2 text-sm font-medium"
+                                >
+                                  Create Class (Google Meet)
+                                </a>
+                                <input
+                                  type="url"
+                                  placeholder="Paste meeting link and send to student"
+                                  value={sessionLinkInput[b._id] || ""}
+                                  onChange={(e) => setSessionLinkInput((p) => ({ ...p, [b._id]: e.target.value }))}
+                                  className="border rounded px-3 py-2 w-72"
+                                />
+                                <input
+                                  type="datetime-local"
+                                  placeholder="Deadline"
+                                  value={sessionDeadlineInput[b._id] || ""}
+                                  onChange={(e) => setSessionDeadlineInput((p) => ({ ...p, [b._id]: e.target.value }))}
+                                  className="border rounded px-3 py-2"
+                                  title="Link expires after this time; student refunded if class not done"
+                                />
+                                <button onClick={() => sendSessionLink(b._id)} className="bg-indigo-600 text-white px-4 py-2 rounded">Send Link</button>
+                              </div>
+                              {b.sessionLinkDeadline && (
+                                <p className="text-xs text-gray-500">Deadline: {new Date(b.sessionLinkDeadline).toLocaleString()}. After this, link expires and payment may be refunded if class not completed.</p>
+                              )}
+                              <button onClick={() => markSessionDone(b._id)} className="bg-green-600 text-white px-4 py-2 rounded text-sm">Mark class done</button>
+                            </>
                           )}
-                          <button onClick={() => markSessionDone(b._id)} className="bg-green-600 text-white px-4 py-2 rounded text-sm">Mark class done</button>
                         </div>
                       </div>
                     </div>

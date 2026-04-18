@@ -48,7 +48,7 @@ const bookingSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ["pending", "held", "released", "refunded"],
+    enum: ["pending", "held", "released", "refunded", "captured"],
     default: "pending",
   },
   sessionLink: {
@@ -58,6 +58,14 @@ const bookingSchema = new mongoose.Schema({
   classDueBy: { type: Date },
   sessionScheduledAt: {
     type: Date,
+  },
+  studentMarkedDone: {
+    type: Boolean,
+    default: false,
+  },
+  tutorMarkedDone: {
+    type: Boolean,
+    default: false,
   },
   sessionCompletedAt: {
     type: Date,

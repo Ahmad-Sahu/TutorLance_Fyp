@@ -407,13 +407,22 @@ const StudentDashboard = () => {
 
     const fetchStudentBookings = async () => {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            // Try to load from cache if not logged in
+            const cached = localStorage.getItem('studentBookings');
+            if (cached) setStudentBookings(JSON.parse(cached));
+            return;
+        }
         try {
             await axios.post('http://localhost:3000/api/v1/payments/process-expired').catch(() => {});
             const res = await axios.get('http://localhost:3000/api/v1/students/bookings', { headers: { Authorization: `Bearer ${token}` } });
             setStudentBookings(res.data.bookings || []);
+            localStorage.setItem('studentBookings', JSON.stringify(res.data.bookings || []));
         } catch (e) {
-            setStudentBookings([]);
+            // On error, load from cache if available
+            const cached = localStorage.getItem('studentBookings');
+            if (cached) setStudentBookings(JSON.parse(cached));
+            else setStudentBookings([]);
         }
     };
 
@@ -598,11 +607,11 @@ const StudentDashboard = () => {
                             <div className="py-8">
                                 <h2 className="text-2xl font-bold mb-4">My Classes</h2>
                                 <p className="text-gray-600 mb-4">Classes or lessons where your tutor has sent a meeting link. Join from here when it’s time.</p>
-                                {studentBookings.filter((b) => b.sessionLink).length === 0 ? (
-                                    <p className="text-gray-500">No classes yet. When a tutor sends a Google Meet (or other) link for a booking, it will appear here.</p>
+                                {studentBookings.filter((b) => b.sessionLink && b.status === 'completed' && b.studentMarkedDone && b.tutorMarkedDone && b.paymentStatus === 'released').length === 0 ? (
+                                    <p className="text-gray-500">No delivered classes yet. When both you and your tutor mark a class as done, and payment is released, it will appear here.</p>
                                 ) : (
                                     <div className="space-y-4">
-                                        {studentBookings.filter((b) => b.sessionLink).map((b) => (
+                                        {studentBookings.filter((b) => b.sessionLink && b.status === 'completed' && b.studentMarkedDone && b.tutorMarkedDone && b.paymentStatus === 'released').map((b) => (
                                             <div key={b._id} className="bg-white rounded-lg shadow p-4 flex flex-wrap items-center justify-between gap-4">
                                                 <div className="flex items-center gap-3">
                                                     <Avatar src={b.tutorId?.profilePicture} firstName={b.tutorId?.firstName} lastName={b.tutorId?.lastName} size="lg" />
@@ -612,9 +621,22 @@ const StudentDashboard = () => {
                                                         <p className="text-xs text-gray-500">{b.proposedDate ? new Date(b.proposedDate).toLocaleDateString() : (b.proposedDay || '') + ' ' + (b.proposedTime || '')}</p>
                                                     </div>
                                                 </div>
-                                                <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg inline-flex items-center gap-2">
-                                                    Join class →
-                                                </a>
+                                                <div className="flex flex-col gap-2 items-end">
+                                                    {b.paymentStatus && b.paymentStatus !== 'pending' ? (
+                                                        <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg inline-flex items-center gap-2">
+                                                            Join class →
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-red-600 font-semibold">You must pay for this class to join</span>
+                                                    )}
+                                                    {/* Mark as Done button only if not already released or marked done */}
+                                                    {(!b.studentMarkedDone || !b.tutorMarkedDone || b.paymentStatus !== 'released') && (
+                                                        <span className="text-yellow-600 font-semibold">Waiting for both to mark done & payment release</span>
+                                                    )}
+                                                    {b.studentMarkedDone && b.tutorMarkedDone && b.paymentStatus === 'released' && (
+                                                        <span className="text-green-600 font-semibold">Payment Released</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -677,6 +699,81 @@ const StudentDashboard = () => {
                                                         <p className="text-xs text-gray-500">{b.status} {b.sessionLink && <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 ml-2">Join class</a>}</p>
                                                     </div>
                                                 </div>
+                                                {/* Payment, Accept, Reject options for accepted/confirmed bookings that are not paid, not completed, not marked done */}
+                                                {(b.status === 'accepted' || b.status === 'confirmed') &&
+                                                  b.paymentStatus !== 'held' &&
+                                                  b.paymentStatus !== 'captured' &&
+                                                  b.paymentStatus !== 'released' &&
+                                                  b.status !== 'completed' &&
+                                                  !b.studentMarkedDone &&
+                                                  !b.tutorMarkedDone && (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm"
+                                                            onClick={() => navigate(`/booking-payment/${b._id}`)}
+                                                        >
+                                                            Pay
+                                                        </button>
+                                                        <button
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await axios.put(`http://localhost:3000/api/v1/students/booking/${b._id}/accept`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                    toast.success('Booking accepted — complete payment now');
+                                                                    // Refresh bookings
+                                                                    const res = await axios.get('http://localhost:3000/api/v1/students/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                    setStudentBookings(res.data.bookings || []);
+                                                                    localStorage.setItem('studentBookings', JSON.stringify(res.data.bookings || []));
+                                                                } catch (err) {
+                                                                    toast.error(err.response?.data?.message || 'Failed to accept');
+                                                                }
+                                                            }}
+                                                        >
+                                                            Accept
+                                                        </button>
+                                                        <button
+                                                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+                                                            onClick={async () => {
+                                                                if (!window.confirm('Reject this booking?')) return;
+                                                                try {
+                                                                    await axios.put(`http://localhost:3000/api/v1/students/booking/${b._id}/reject`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                    toast.success('Booking rejected');
+                                                                    // Refresh bookings
+                                                                    const res = await axios.get('http://localhost:3000/api/v1/students/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                    setStudentBookings(res.data.bookings || []);
+                                                                    localStorage.setItem('studentBookings', JSON.stringify(res.data.bookings || []));
+                                                                } catch (err) {
+                                                                    toast.error(err.response?.data?.message || 'Failed to reject');
+                                                                }
+                                                            }}
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Mark as Done for all paid bookings, not already marked done or completed */}
+                                                {(b.paymentStatus === 'held' || b.paymentStatus === 'captured' || b.paymentStatus === 'released') &&
+                                                  !b.studentMarkedDone &&
+                                                  b.status !== 'completed' && (
+                                                    <button
+                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm"
+                                                        onClick={async () => {
+                                                            try {
+                                                                await axios.put(`http://localhost:3000/api/v1/students/session/${b._id}/done`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                toast.success('Marked as done! Payment will release if tutor also marks done.');
+                                                                // Refresh bookings
+                                                                const res = await axios.get('http://localhost:3000/api/v1/students/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                setStudentBookings(res.data.bookings || []);
+                                                                localStorage.setItem('studentBookings', JSON.stringify(res.data.bookings || []));
+                                                            } catch (err) {
+                                                                toast.error(err.response?.data?.message || 'Failed to mark as done');
+                                                            }
+                                                        }}
+                                                    >
+                                                        Mark as Done
+                                                    </button>
+                                                )}
                                                 {b.status === 'completed' && (
                                                     b.rating ? (
                                                         <span className="text-sm text-gray-500">Rated {b.rating}★</span>
