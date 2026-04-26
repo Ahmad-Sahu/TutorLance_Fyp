@@ -6,6 +6,7 @@ import { FaClipboardList, FaRegHandshake, FaInbox, FaBell, FaThumbsUp, FaUser, F
 import axios from "axios";
 import Avatar from "./Avatar";
 import TutorProfileForm from "./TutorProfileForm";
+import WithdrawModal from "./WithdrawModal";
 
 const API = "http://localhost:3000/api/v1";
 
@@ -24,6 +25,7 @@ const TutorDashboard = () => {
   const [complaintText, setComplaintText] = useState("");
   const [myComplaints, setMyComplaints] = useState([]);
   const [acceptClassDueBy, setAcceptClassDueBy] = useState({});
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -148,14 +150,30 @@ const TutorDashboard = () => {
     }
   };
 
-  const handleWithdraw = async () => {
-    if (!window.confirm("Withdraw your earnings? This will process a payout.")) return;
+
+  // New withdraw handler using modal and Stripe
+  const handleWithdraw = async (amount, cardElement, stripe) => {
     try {
-      await axios.post(`${API}/tutors/withdraw`, {}, authHeaders());
-      toast.success("Withdrawal requested. Earnings balance reset.");
+      // 1. Create payment method with Stripe
+      const { paymentMethod, error: pmError } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+      });
+      if (pmError) throw new Error(pmError.message);
+
+      // 2. Call backend to process withdrawal
+      const res = await axios.post(`${API}/tutors/withdraw`, {
+        amount,
+        paymentMethodId: paymentMethod.id,
+      }, authHeaders());
+
+      // 3. Update UI and notify
+      toast.success(`Withdrawal of PKR ${amount} requested. Admin will review and process.`);
       fetchTutorData();
+
+      // 4. Optionally: notify admin (handled backend)
     } catch (err) {
-      toast.error(err.response?.data?.message || "Withdrawal failed");
+      throw new Error(err.response?.data?.message || err.message || "Withdrawal failed");
     }
   };
 
@@ -255,12 +273,18 @@ const TutorDashboard = () => {
             </div>
           </div>
           <button
-            onClick={handleWithdraw}
+            onClick={() => setWithdrawOpen(true)}
             disabled={!(tutor.earnings > 0)}
             className="w-full mb-4 py-2 rounded bg-green-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Withdraw (Stripe)
           </button>
+          <WithdrawModal
+            open={withdrawOpen}
+            onClose={() => setWithdrawOpen(false)}
+            maxAmount={tutor.earnings ?? 0}
+            onWithdraw={handleWithdraw}
+          />
 
           <nav className="space-y-2">
             <button onClick={() => setActiveSection("profile")} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "profile" ? "bg-blue-50" : ""}`}>

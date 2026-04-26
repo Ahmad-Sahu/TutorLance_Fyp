@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import WithdrawModal from "./WithdrawModal";
 import axios from "axios";
 import { toast } from 'react-hot-toast'
 import {
@@ -25,6 +26,32 @@ const FreelancerDashboard = () => {
   const [offersLoading, setOffersLoading] = useState(false);
   const [highlightedGig, setHighlightedGig] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+    // Withdraw handler for freelancers
+    const handleWithdraw = async (amount, cardElement, stripe) => {
+      try {
+        const { paymentMethod, error: pmError } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardElement,
+        });
+        if (pmError) throw new Error(pmError.message);
+        const token = localStorage.getItem("token");
+        const res = await axios.post(
+          `http://localhost:3000/api/v1/freelancers/withdraw`,
+          { amount, paymentMethodId: paymentMethod.id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success(`Withdrawal of PKR ${amount} requested. Admin will review and process.`);
+        // Refresh dashboard data
+        const id = localStorage.getItem("freelancerId");
+        if (id) {
+          const res = await axios.get(`http://localhost:3000/api/v1/freelancers/${id}/dashboard`);
+          setDashboardData(res.data);
+        }
+      } catch (err) {
+        throw new Error(err.response?.data?.message || err.message || "Withdrawal failed");
+      }
+    };
   const [updatedProfile, setUpdatedProfile] = useState({});
   const [newGig, setNewGig] = useState({ title: "", description: "", price: "" });
   const [complaintText, setComplaintText] = useState("");
@@ -316,6 +343,19 @@ const FreelancerDashboard = () => {
                 <h3 className="text-3xl font-bold text-green-600">
                   Rs. {dashboardData.totalEarnings || 0}
                 </h3>
+                <button
+                  onClick={() => setWithdrawOpen(true)}
+                  disabled={!(dashboardData.totalEarnings > 0)}
+                  className="mt-3 w-full py-2 rounded bg-green-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Withdraw (Stripe)
+                </button>
+                <WithdrawModal
+                  open={withdrawOpen}
+                  onClose={() => setWithdrawOpen(false)}
+                  maxAmount={dashboardData.totalEarnings || 0}
+                  onWithdraw={handleWithdraw}
+                />
               </Card>
               <Card>
                 <p className="text-gray-500">Feedbacks</p>
@@ -478,7 +518,13 @@ const FreelancerDashboard = () => {
                       <input
                         type="text"
                         value={updatedProfile.name || ""}
-                        onChange={(e) => setUpdatedProfile({ ...updatedProfile, name: e.target.value })}
+                        maxLength={20}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          // Only English letters, no numbers, no spaces, max 20 chars
+                          value = value.replace(/[^A-Za-z]/g, "");
+                          setUpdatedProfile({ ...updatedProfile, name: value });
+                        }}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
                     </div>
@@ -487,6 +533,7 @@ const FreelancerDashboard = () => {
                       <input
                         type="text"
                         value={updatedProfile.domain || ""}
+                        maxLength={30}
                         onChange={(e) => setUpdatedProfile({ ...updatedProfile, domain: e.target.value })}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
@@ -496,6 +543,7 @@ const FreelancerDashboard = () => {
                       <input
                         type="text"
                         value={updatedProfile.skills || ""}
+                        maxLength={50}
                         onChange={(e) => setUpdatedProfile({ ...updatedProfile, skills: e.target.value })}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
@@ -519,6 +567,7 @@ const FreelancerDashboard = () => {
                       <input
                         type="text"
                         value={updatedProfile.cnicNumber || ""}
+                        maxLength={15}
                         onChange={(e) => setUpdatedProfile({ ...updatedProfile, cnicNumber: e.target.value })}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />

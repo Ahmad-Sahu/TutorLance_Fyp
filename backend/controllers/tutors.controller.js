@@ -9,12 +9,21 @@ export const signup = async (req, res) => {
     const {role, firstName, lastName, email, password} = req.body;
 
     const signupSchema = z.object({
-    role: z.enum(["tutor", "student", "freelancer", "admin"]),
-    firstName: z.string().min(2,{message : "First name must be at least 2 characters long"}).max(100),
-    lastName: z.string().min(2,{message : "Last name must be at least 2 characters long"}).max(100),
-    email: z.string().email({message : "Invalid email format"}),
-    password: z.string().min(6,{message : "Password must be at least 6 characters long"}).max(100)
-});
+      role: z.enum(["tutor", "student", "freelancer", "admin"]),
+      firstName: z.string()
+        .min(2, { message: "First name must be at least 2 characters long" })
+        .max(15, { message: "First name must be at most 15 characters" })
+        .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" }),
+      lastName: z.string()
+        .min(2, { message: "Last name must be at least 2 characters long" })
+        .max(15, { message: "Last name must be at most 15 characters" })
+        .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" }),
+      email: z.string().email({ message: "Invalid email format" }),
+      password: z.string()
+        .min(6, { message: "Password must be at least 6 characters long" })
+        .max(15, { message: "Password must be at most 15 characters" })
+        .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
+    });
 
 const validation = signupSchema.safeParse(req.body);
     if (!validation.success) {
@@ -331,6 +340,30 @@ export const updateTutorProfile = async (req, res) => {
   try {
     const tutorId = req.tutor.id;
     const updates = req.body;
+
+    // Zod validation (same as signup, but all fields optional)
+    const updateSchema = z.object({
+      firstName: z.string()
+        .min(2, { message: "First name must be at least 2 characters long" })
+        .max(15, { message: "First name must be at most 15 characters" })
+        .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" })
+        .optional(),
+      lastName: z.string()
+        .min(2, { message: "Last name must be at least 2 characters long" })
+        .max(15, { message: "Last name must be at most 15 characters" })
+        .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" })
+        .optional(),
+      email: z.string().email({ message: "Invalid email format" }).optional(),
+      password: z.string()
+        .min(6, { message: "Password must be at least 6 characters long" })
+        .max(15, { message: "Password must be at most 15 characters" })
+        .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
+        .optional(),
+    });
+    const validation = updateSchema.safeParse(updates);
+    if (!validation.success) {
+      return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
+    }
 
     const tutor = await Tutor.findByIdAndUpdate(tutorId, updates, { new: true });
     if (!tutor) {

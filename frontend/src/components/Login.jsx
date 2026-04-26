@@ -25,33 +25,29 @@ function Login() {
     const [showVerify, setShowVerify] = useState(false);
     const navigate = useNavigate();
 
+
+    // Helper: strict email validation
+    const isValidEmail = (val) => {
+        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val.trim());
+    };
+
+    // Helper: strict password validation (no spaces, max 15 chars, not only blank)
+    const isValidPassword = (val) => {
+        return val.length >= 6 && val.length <= 15 && !/\s/.test(val) && val.trim() !== "";
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage(""); // Clear previous errors
 
-
-        // Validate inputs
-        if (!email || !password) {
-            const missingField = !email ? "Email" : "Password";
-            setErrorMessage(`${missingField} is required.`);
+        // Validate email
+        if (!email || !isValidEmail(email)) {
+            setErrorMessage("Please enter a valid email address.");
             return;
         }
-        // Password: no only spaces, allow spaces only between words, max 20 words
-        const trimmedPassword = password.trim();
-        if (!trimmedPassword) {
-            setErrorMessage("Password cannot be empty or only spaces.");
-            return;
-        }
-        if (/  +/.test(trimmedPassword)) {
-            setErrorMessage("Password cannot have multiple consecutive spaces.");
-            return;
-        }
-        if (trimmedPassword.split(' ').length > 20) {
-            setErrorMessage("Password cannot exceed 20 words.");
-            return;
-        }
-        if (password.length < 6) {
-            setErrorMessage("Password must be at least 6 characters long.");
+        // Validate password
+        if (!isValidPassword(password)) {
+            setErrorMessage("Password must be 6-15 characters, no spaces, not blank.");
             return;
         }
 
@@ -228,7 +224,13 @@ function Login() {
                             type="email"
                             placeholder="Enter your email (e.g. user@example.com)"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            maxLength={50}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                // Prevent only blank spaces
+                                if (value.trim() === "") setEmail("");
+                                else setEmail(value);
+                            }}
                             className="w-full border rounded p-2 mb-4"
                             required
                         />
@@ -240,7 +242,13 @@ function Login() {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Enter your password"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                maxLength={15}
+                                onChange={(e) => {
+                                    let value = e.target.value;
+                                    // Block spaces and only blank
+                                    value = value.replace(/\s/g, "");
+                                    setPassword(value);
+                                }}
                                 className="w-full border rounded p-2 mb-6"
                                 required
                             />

@@ -79,6 +79,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { Freelancer } from "../models/freelancers.model.js";
 import { sendOtpEmail } from "../utils/send-email.js";
+import { z } from "zod";
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 dotenv.config();
 
@@ -89,17 +90,34 @@ export const registerFreelancer = async (req, res) => {
   try {
     // Accept both formats: (firstName + lastName) or (name)
     let { name, email, password, skills, experience, firstName, lastName } = req.body;
-    
-    // If firstName and lastName provided, combine them into name
-    if (!name && firstName && lastName) {
-      name = `${firstName} ${lastName}`;
+
+    // Zod schema for validation
+    const freelancerSchema = z.object({
+      firstName: z.string().min(2, { message: "First name must be at least 2 characters long" }).max(15, { message: "First name must be at most 15 characters" }).regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" }),
+      lastName: z.string().min(2, { message: "Last name must be at least 2 characters long" }).max(15, { message: "Last name must be at most 15 characters" }).regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" }),
+      email: z.string().email({ message: "Invalid email format" }),
+      password: z.string().min(6, { message: "Password must be at least 6 characters long" }).max(15, { message: "Password must be at most 15 characters" }).regex(/^[^\s]+$/, { message: "Password must not contain spaces" }),
+      skills: z.string().optional(),
+      experience: z.string().optional(),
+    });
+
+    // If firstName/lastName not provided, try to split from name
+    if (!firstName && name) {
+      const parts = name.split(" ");
+      firstName = parts[0];
+      lastName = parts.slice(1).join(" ") || "";
     }
-    
-    // Validate required fields
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required" });
+
+    // Validate
+    const validation = freelancerSchema.safeParse({ firstName, lastName, email, password, skills, experience });
+    if (!validation.success) {
+      return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
     }
-    
+
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: "First name, last name, email, and password are required" });
+    }
+
     const existing = await Freelancer.findOne({ email });
     if (existing) {
       return res.status(400).json({
@@ -264,7 +282,33 @@ export const getFreelancerProfile = async (req, res) => {
 ============================== */
 export const updateFreelancerProfile = async (req, res) => {
   try {
-    const updated = await Freelancer.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updates = req.body;
+
+    // Zod validation (same as signup, but all fields optional)
+    const updateSchema = z.object({
+      firstName: z.string()
+        .min(2, { message: "First name must be at least 2 characters long" })
+        .max(15, { message: "First name must be at most 15 characters" })
+        .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" })
+        .optional(),
+      lastName: z.string()
+        .min(2, { message: "Last name must be at least 2 characters long" })
+        .max(15, { message: "Last name must be at most 15 characters" })
+        .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" })
+        .optional(),
+      email: z.string().email({ message: "Invalid email format" }).optional(),
+      password: z.string()
+        .min(6, { message: "Password must be at least 6 characters long" })
+        .max(15, { message: "Password must be at most 15 characters" })
+        .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
+        .optional(),
+    });
+    const validation = updateSchema.safeParse(updates);
+    if (!validation.success) {
+      return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
+    }
+
+    const updated = await Freelancer.findByIdAndUpdate(req.params.id, updates, { new: true });
     res.status(200).json(updated);
   } catch (error) {
     res.status(500).json({ message: error.message });

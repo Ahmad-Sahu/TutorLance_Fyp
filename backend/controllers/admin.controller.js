@@ -15,10 +15,19 @@ export const signup = async (req, res) => {
   const role = 'admin';
 
   const signupSchema = z.object({
-    firstName: z.string().min(2, { message: "First name must be at least 2 characters long" }).max(100),
-    lastName: z.string().min(2, { message: "Last name must be at least 2 characters long" }).max(100),
+    firstName: z.string()
+      .min(2, { message: "First name must be at least 2 characters long" })
+      .max(100)
+      .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" }),
+    lastName: z.string()
+      .min(2, { message: "Last name must be at least 2 characters long" })
+      .max(100)
+      .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" }),
     email: z.string().email({ message: "Invalid email format" }),
-    password: z.string().min(6, { message: "Password must be at least 6 characters long" }).max(100)
+    password: z.string()
+      .min(6, { message: "Password must be at least 6 characters long" })
+      .max(100)
+      .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
   });
 
   const validation = signupSchema.safeParse({ firstName, lastName, email, password });

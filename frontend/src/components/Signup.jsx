@@ -25,26 +25,34 @@ function Signup() {
     const navigate = useNavigate();
 
 
-    // Helper: allow only spaces between words, no leading/trailing/multiple spaces, max 20 words
+    // Helper: allow only English letters and single spaces between words, no numbers or special characters, max 15 chars
     const isValidName = (val) => {
         if (!val) return false;
         const trimmed = val.trim();
         if (!trimmed) return false;
         // No multiple consecutive spaces
         if (/  +/.test(trimmed)) return false;
-        // Only letters and single spaces between words
+        // Only English letters and single spaces between words
         if (!/^[A-Za-z]+( [A-Za-z]+)*$/.test(trimmed)) return false;
-        // Max 20 words
-        if (trimmed.split(' ').length > 20) return false;
+        // Max 15 characters
+        if (trimmed.length > 15) return false;
         return true;
     };
-    // Helper: password max 20 words, no only spaces
+
+    // Helper: email must be valid and only @gmail.com allowed, no spaces
+    const isValidEmail = (val) => {
+        if (!val) return false;
+        if (/\s/.test(val)) return false;
+        // Only allow emails ending with @gmail.com
+        return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(val.trim());
+    };
+    // Helper: password must not contain any spaces, max 15 chars
     const isValidPassword = (val) => {
         if (!val) return false;
-        const trimmed = val.trim();
-        if (!trimmed) return false;
-        if (/  +/.test(trimmed)) return false;
-        if (trimmed.split(' ').length > 20) return false;
+        // No spaces allowed at all
+        if (/\s/.test(val)) return false;
+        // Length check (6-15 chars)
+        if (val.length < 6 || val.length > 15) return false;
         return true;
     };
 
@@ -58,6 +66,12 @@ function Signup() {
         // Validate last name
         if (!isValidName(lastName)) {
             setErrorMessage("Last name must be 1-20 words, only letters, no leading/trailing/multiple spaces.");
+            return;
+        }
+
+        // Validate email
+        if (!isValidEmail(email)) {
+            setErrorMessage("Please enter a valid Gmail address (e.g. user@gmail.com), no spaces allowed.");
             return;
         }
         // Validate password
@@ -203,7 +217,12 @@ function Signup() {
                             type="text"
                             placeholder="Enter your first name"
                             value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
+                            onChange={(e) => {
+                                // Remove numbers and prevent only blank spaces
+                                let value = e.target.value.replace(/[0-9]/g, "");
+                                if (/^\s*$/.test(value)) value = "";
+                                setFirstName(value);
+                            }}
                             className="w-full border rounded p-2 mb-4"
                             required
                         />
@@ -214,7 +233,12 @@ function Signup() {
                             type="text"
                             placeholder="Enter your last name"
                             value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
+                            onChange={(e) => {
+                                // Remove numbers and prevent only blank spaces
+                                let value = e.target.value.replace(/[0-9]/g, "");
+                                if (/^\s*$/.test(value)) value = "";
+                                setLastName(value);
+                            }}
                             className="w-full border rounded p-2 mb-4"
                             required
                         />
@@ -223,9 +247,18 @@ function Signup() {
                         <label className="block mb-2 font-semibold">Email</label>
                         <input
                             type="email"
-                            placeholder="Enter your email (e.g. user@example.com)"
+                            placeholder="Enter your email (e.g. user@gmail.com)"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            maxLength={30}
+                            onChange={(e) => {
+                                let value = e.target.value;
+                                // Block spaces
+                                value = value.replace(/\s/g, "");
+                                // Only allow input that matches partial @gmail.com or is empty
+                                if (value === "" || /^[a-zA-Z0-9._%+-]*@?g?m?a?i?l?\.?c?o?m?$/.test(value)) {
+                                    setEmail(value);
+                                }
+                            }}
                             className="w-full border rounded p-2 mb-4"
                             required
                         />
@@ -237,7 +270,13 @@ function Signup() {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Enter your password"
                                 value={password}
-                                onChange={(e) => { setPassword(e.target.value); setErrorMessage(""); }}
+                                onChange={(e) => {
+                                    // Prevent only blank spaces
+                                    let value = e.target.value;
+                                    if (/^\s*$/.test(value)) value = "";
+                                    setPassword(value);
+                                    setErrorMessage("");
+                                }}
                                 className="w-full border rounded p-2 mb-6"
                                 required
                             />
@@ -253,7 +292,13 @@ function Signup() {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Confirm your password"
                                 value={confirmPassword}
-                                onChange={(e) => { setConfirmPassword(e.target.value); setErrorMessage(""); }}
+                                onChange={(e) => {
+                                    // Prevent only blank spaces
+                                    let value = e.target.value;
+                                    if (/^\s*$/.test(value)) value = "";
+                                    setConfirmPassword(value);
+                                    setErrorMessage("");
+                                }}
                                 className="w-full border rounded p-2 mb-6"
                                 required
                             />

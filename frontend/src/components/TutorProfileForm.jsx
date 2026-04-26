@@ -217,7 +217,7 @@ const TutorProfileForm = ({
                     {/* Hourly Rate */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Hourly Rate (PKR, 300-2500)
+                            Hourly Rate (PKR, 300-3000)
                         </label>
                         <input
                             type="number"
@@ -226,7 +226,7 @@ const TutorProfileForm = ({
                             onChange={handleInputChange}
                             name="hourlyRate"
                             min={300}
-                            max={2500}
+                            max={3000}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             required
                         />
@@ -254,20 +254,22 @@ const TutorProfileForm = ({
                         </select>
                     </div>
 
-                    {/* Specialities (Dropdown) */}
+                    {/* Speciality (Dropdown, no typing, like role in Signup) */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Speciality
                         </label>
-                        <Select
-                            options={specialityOptions}
-                            value={specialityOptions.find(opt => formData.specialities[0] === opt.value) || null}
-                            onChange={handleSpecialityChange}
-                            className="mb-2"
-                            placeholder="Select speciality..."
-                            isClearable
+                        <select
+                            value={formData.specialities[0] || ""}
+                            onChange={e => setFormData(prev => ({ ...prev, specialities: e.target.value ? [e.target.value] : [] }))}
+                            className="w-full border rounded p-2 mb-4"
                             required
-                        />
+                        >
+                            <option value="">Select speciality</option>
+                            <option value="beginner">Beginner</option>
+                            <option value="advance">Advance</option>
+                            <option value="expert">Expert</option>
+                        </select>
                     </div>
 
                     {/* Languages (Dropdown) */}
