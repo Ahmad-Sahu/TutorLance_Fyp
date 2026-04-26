@@ -10,6 +10,29 @@ import axios from 'axios';
 import Avatar from './Avatar';
 
 function TutorProfileView() {
+    const token = localStorage.getItem('token');
+    let loggedInName = null;
+    let dashboardPath = '/login';
+
+    if (token) {
+        try {
+            const studentData = localStorage.getItem('student');
+            const tutorData = localStorage.getItem('tutor');
+            if (studentData) {
+                const s = JSON.parse(studentData);
+                loggedInName = s.firstName || 'Dashboard';
+                dashboardPath = '/studentdashboard';
+            } else if (tutorData) {
+                const t = JSON.parse(tutorData);
+                loggedInName = t.firstName || 'Dashboard';
+                dashboardPath = '/tutordashboard';
+            } else if (localStorage.getItem('tutorId')) {
+                loggedInName = 'Dashboard';
+                dashboardPath = '/tutordashboard';
+            }
+        } catch (e) {}
+    }
+
     const { tutorId } = useParams();
     const navigate = useNavigate();
     const [tutor, setTutor] = useState(null);
@@ -25,9 +48,12 @@ function TutorProfileView() {
         message: ''
     });
     const [saved, setSaved] = useState(false);
+    const [existingBookings, setExistingBookings] = useState([]);
+    const [conflictMessage, setConflictMessage] = useState("");
 
     useEffect(() => {
         fetchTutorProfile();
+        fetchTutorBookings();
     }, [tutorId]);
 
     useEffect(() => {
@@ -60,6 +86,48 @@ function TutorProfileView() {
         }
     };
 
+    const fetchTutorBookings = async () => {
+        try {
+            const response = await axios.get(`http://localhost:3000/api/v1/tutors/${tutorId}/bookings-public`);
+            if (response.data && response.data.bookings) {
+                // Filter to get only confirmed/accepted bookings to check against
+                const activeBookings = response.data.bookings.filter(b => b.status === 'confirmed' || b.status === 'accepted' || b.status === 'pending');
+                setExistingBookings(activeBookings);
+            }
+        } catch (error) {
+            console.error('Error fetching tutor bookings for availability:', error);
+        }
+    };
+
+    // Check for conflicts whenever date, day or time changes
+    useEffect(() => {
+        if (!bookingData.proposedDate && !bookingData.proposedDay && !bookingData.proposedTime) {
+            setConflictMessage("");
+            return;
+        }
+
+        const isConflict = existingBookings.some(booking => {
+            // Simple match logic based on Date/Day AND Time
+            // In a real app, this might involve duration or Date object comparisons
+            const matchesDay = booking.proposedDay === bookingData.proposedDay;
+            const matchesDate = booking.proposedDate && booking.proposedDate.split('T')[0] === bookingData.proposedDate;
+            const matchesTime = booking.proposedTime === bookingData.proposedTime;
+
+            if (bookingData.proposedTime && matchesTime) {
+                if ((bookingData.proposedDay && matchesDay) || (bookingData.proposedDate && matchesDate)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (isConflict) {
+            setConflictMessage("Tutor already has a booking at this time, please choose another time or day.");
+        } else {
+            setConflictMessage("");
+        }
+    }, [bookingData.proposedDate, bookingData.proposedDay, bookingData.proposedTime, existingBookings]);
+
     const handleBookTutor = async () => {
         const studentId = localStorage.getItem('studentId');
         const token = localStorage.getItem('token');
@@ -67,6 +135,11 @@ function TutorProfileView() {
         if (!studentId || !token) {
             toast.error('Please login as a student to book a tutor');
             navigate('/login');
+            return;
+        }
+
+        if (conflictMessage) {
+            toast.error("Please resolve scheduling conflict before booking.");
             return;
         }
 
@@ -150,9 +223,15 @@ function TutorProfileView() {
 
                 <div className='flex items-center justify-between'>
                     <a className='flex items-center mr-8 font-semibold' href="">English <span className='text-4xl ml-2 font-bold'><MdExpandMore /></span></a>
-                    <Link to="/login">
-                        <button className='flex bg-blue-600 text-white py-3 px-6 border-4 border-white rounded-full font-semibold hover:bg-blue-700 transition-colors'>
-                            <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login
+                    <Link to={dashboardPath}>
+                        <button className='flex items-center bg-blue-600 text-white py-3 px-6 border-4 border-white rounded-full font-semibold hover:bg-blue-700 transition-colors'>
+                            {loggedInName ? (
+                                <span className='mr-2'>{loggedInName}'s Dashboard</span>
+                            ) : (
+                                <>
+                                    <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login
+                                </>
+                            )}
                         </button>
                     </Link>
                 </div>
@@ -421,15 +500,29 @@ function TutorProfileView() {
                                     onChange={(e) => handleInputChange('proposedDay', e.target.value)}
                                 >
                                     <option value="">Select Day</option>
-                                    <option value="Monday">Monday</option>
-                                    <option value="Tuesday">Tuesday</option>
-                                    <option value="Wednesday">Wednesday</option>
-                                    <option value="Thursday">Thursday</option>
-                                    <option value="Friday">Friday</option>
-                                    <option value="Saturday">Saturday</option>
-                                    <option value="Sunday">Sunday</option>
+                                    {tutor.availability && tutor.availability.length > 0 ? (
+                                        tutor.availability.map(day => (
+                                            <option key={day} value={day}>{day}</option>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <option value="Monday">Monday</option>
+                                            <option value="Tuesday">Tuesday</option>
+                                            <option value="Wednesday">Wednesday</option>
+                                            <option value="Thursday">Thursday</option>
+                                            <option value="Friday">Friday</option>
+                                            <option value="Saturday">Saturday</option>
+                                            <option value="Sunday">Sunday</option>
+                                        </>
+                                    )}
                                 </select>
                             </div>
+
+                            {conflictMessage && (
+                                <div className="p-3 bg-red-100 border border-red-300 text-red-700 rounded text-sm font-semibold">
+                                    ⚠️ {conflictMessage}
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Message (Optional)</label>
@@ -452,7 +545,8 @@ function TutorProfileView() {
                             </button>
                             <button
                                 onClick={handleBookTutor}
-                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
+                                disabled={!!conflictMessage}
+                                className={`flex-1 py-2 px-4 rounded-lg transition-colors text-white ${conflictMessage ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                             >
                                 Send Request
                             </button>

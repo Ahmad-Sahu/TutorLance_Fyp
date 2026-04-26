@@ -65,9 +65,16 @@ const TutorDashboard = () => {
     try {
       const res = await axios.get(`${API}/tutors/bookings`, authHeaders());
       setBookings(res.data.bookings || []);
-      const map = {};
-      (res.data.bookings || []).forEach((b) => (map[b._id] = b.proposedPrice));
-      setNegotiationMap((prev) => ({ ...prev, ...map }));
+      // Only initialise entries that the tutor has NOT yet manually edited
+      setNegotiationMap((prev) => {
+        const next = { ...prev };
+        (res.data.bookings || []).forEach((b) => {
+          if (next[b._id] === undefined) {
+            next[b._id] = b.proposedPrice;
+          }
+        });
+        return next;
+      });
       if (!res.data.bookings?.length) fetchBookingsFallback();
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) navigate("/login");
@@ -80,9 +87,15 @@ const TutorDashboard = () => {
     try {
       const res = await axios.get(`${API}/tutors/${tutorId}/bookings-public`);
       setBookings(res.data.bookings || []);
-      const map = {};
-      (res.data.bookings || []).forEach((b) => (map[b._id] = b.proposedPrice));
-      setNegotiationMap((prev) => ({ ...prev, ...map }));
+      setNegotiationMap((prev) => {
+        const next = { ...prev };
+        (res.data.bookings || []).forEach((b) => {
+          if (next[b._id] === undefined) {
+            next[b._id] = b.proposedPrice;
+          }
+        });
+        return next;
+      });
     } catch (err) {}
   };
 
@@ -110,7 +123,17 @@ const TutorDashboard = () => {
   };
 
   const adjustCounter = (id, delta) => {
-    setNegotiationMap((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) + delta) }));
+    setNegotiationMap((prev) => ({
+      ...prev,
+      [id]: Math.min(2500, Math.max(300, (Number(prev[id]) || 300) + delta))
+    }));
+  };
+
+  const setCounterDirect = (id, value) => {
+    // Allow free typing; enforce range on send
+    if (value === '' || /^\d+$/.test(value)) {
+      setNegotiationMap((prev) => ({ ...prev, [id]: value === '' ? '' : Number(value) }));
+    }
   };
 
   const sendCounterOffer = async (id) => {
@@ -357,31 +380,84 @@ const TutorDashboard = () => {
             <section>
               <h2 className="text-2xl font-bold mb-4">Booking Requests</h2>
               {pendingRequests.length === 0 ? <div className="text-gray-500">No new requests.</div> : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {pendingRequests.map((b) => (
-                    <div key={b._id} className="bg-white p-4 rounded shadow flex justify-between items-start flex-wrap gap-2">
-                      <div>
-                        <div className="text-lg font-semibold">{b.studentId?.firstName} {b.studentId?.lastName}</div>
-                        <div className="text-sm text-gray-600">{b.subject} — PKR {b.proposedPrice}</div>
-                        <div className="text-sm text-gray-500 mt-2">{b.topicDescription}</div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs text-gray-500">Link must be sent by (optional)</label>
-                        <input type="datetime-local" value={acceptClassDueBy[b._id] || ""} onChange={(e) => setAcceptClassDueBy((p) => ({ ...p, [b._id]: e.target.value }))} className="border rounded px-2 py-1 text-sm" />
-                        <button onClick={() => acceptBooking(b._id, acceptClassDueBy[b._id] || undefined)} className="bg-green-600 text-white px-4 py-2 rounded">Accept</button>
-                        <button onClick={() => rejectBooking(b._id)} className="bg-red-500 text-white px-4 py-2 rounded">Reject</button>
-                        <button onClick={() => setNegotiatingBookingId(b._id)} className="bg-gray-200 px-4 py-2 rounded">Negotiate</button>
-                        {negotiatingBookingId === b._id && (
-                          <div className="flex flex-col items-center gap-2 mt-2 bg-gray-50 p-3 rounded border">
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => adjustCounter(b._id, -50)} className="px-3 py-2 bg-gray-100 rounded">-50</button>
-                              <div className="px-4 py-2 border rounded">PKR {negotiationMap[b._id]}</div>
-                              <button onClick={() => adjustCounter(b._id, 50)} className="px-3 py-2 bg-gray-100 rounded">+50</button>
-                            </div>
-                            <button onClick={() => { sendCounterOffer(b._id); setNegotiatingBookingId(null); }} className="bg-blue-600 text-white px-4 py-2 rounded mt-2">Send Counter Offer</button>
+                    <div key={b._id} className="bg-white p-5 rounded-lg shadow border-l-4 border-blue-500">
+                      {/* Student Info */}
+                      <div className="flex justify-between items-start flex-wrap gap-4 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xl font-bold text-gray-900 mb-3">
+                            {b.studentId?.firstName} {b.studentId?.lastName}
+                            {b.studentId?.email && <span className="ml-2 text-sm font-normal text-gray-500">({b.studentId.email})</span>}
                           </div>
-                        )}
+
+                          {/* Full Booking Details Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-3">
+                            <div><span className="font-semibold text-gray-700">📚 Subject:</span> <span className="text-gray-800">{b.subject || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-700">💰 Proposed Amount:</span> <span className="text-green-700 font-semibold">PKR {b.proposedPrice}</span></div>
+                            <div><span className="font-semibold text-gray-700">📅 Preferred Date:</span> <span className="text-gray-800">{b.proposedDate ? new Date(b.proposedDate).toLocaleDateString('en-PK', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) : '—'}</span></div>
+                            <div><span className="font-semibold text-gray-700">📆 Preferred Day:</span> <span className="text-gray-800">{b.proposedDay || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-700">🕐 Preferred Time:</span> <span className="text-gray-800">{b.proposedTime || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-700">📌 Status:</span> <span className={`px-2 py-0.5 rounded text-xs font-semibold ${b.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : b.status === 'negotiating' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{b.status}</span></div>
+                          </div>
+
+                          {b.topicDescription && (
+                            <div className="bg-blue-50 border border-blue-100 rounded p-3 mb-2">
+                              <p className="text-xs font-semibold text-blue-700 mb-1">📝 Topic Description:</p>
+                              <p className="text-sm text-gray-800">{b.topicDescription}</p>
+                            </div>
+                          )}
+                          {b.message && (
+                            <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                              <p className="text-xs font-semibold text-gray-600 mb-1">💬 Student Message:</p>
+                              <p className="text-sm text-gray-700">{b.message}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col gap-2 min-w-[160px]">
+                          <label className="text-xs text-gray-500">Link must be sent by (optional)</label>
+                          <input type="datetime-local" value={acceptClassDueBy[b._id] || ""} onChange={(e) => setAcceptClassDueBy((p) => ({ ...p, [b._id]: e.target.value }))} className="border rounded px-2 py-1 text-sm" />
+                          <button onClick={() => acceptBooking(b._id, acceptClassDueBy[b._id] || undefined)} className="bg-green-600 text-white px-4 py-2 rounded font-semibold">✅ Accept</button>
+                          <button onClick={() => rejectBooking(b._id)} className="bg-red-500 text-white px-4 py-2 rounded font-semibold">❌ Reject</button>
+                          <button onClick={() => setNegotiatingBookingId(negotiatingBookingId === b._id ? null : b._id)} className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded font-semibold">🤝 Negotiate</button>
+                        </div>
                       </div>
+
+                      {/* Negotiate Panel */}
+                      {negotiatingBookingId === b._id && (
+                        <div className="mt-3 bg-gray-50 p-4 rounded border">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Set Counter Offer Amount (PKR 300 – 2500):</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button onClick={() => adjustCounter(b._id, -50)} className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded font-bold">−50</button>
+                            <input
+                              type="number"
+                              min={300}
+                              max={2500}
+                              value={negotiationMap[b._id] ?? ''}
+                              onChange={(e) => setCounterDirect(b._id, e.target.value)}
+                              className="w-32 text-center border-2 border-blue-400 rounded px-3 py-2 font-bold text-lg"
+                            />
+                            <button onClick={() => adjustCounter(b._id, 50)} className="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded font-bold">+50</button>
+                            <span className="text-sm text-gray-500">PKR</span>
+                          </div>
+                          {(negotiationMap[b._id] < 300 || negotiationMap[b._id] > 2500) && negotiationMap[b._id] !== '' && (
+                            <p className="text-red-500 text-xs mt-1">Amount must be between PKR 300 and 2500</p>
+                          )}
+                          <button
+                            onClick={() => {
+                              const amt = Number(negotiationMap[b._id]);
+                              if (amt < 300 || amt > 2500) { toast.error('Amount must be between PKR 300 and 2500'); return; }
+                              sendCounterOffer(b._id);
+                              setNegotiatingBookingId(null);
+                            }}
+                            className="mt-3 bg-blue-600 text-white px-5 py-2 rounded font-semibold"
+                          >
+                            Send Counter Offer
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -393,33 +469,76 @@ const TutorDashboard = () => {
             <section>
               <h2 className="text-2xl font-bold mb-4">Counter Offers / Negotiations</h2>
               {negotiating.length === 0 ? <div className="text-gray-500">No active negotiations.</div> : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {negotiating.map((b) => (
-                    <div key={b._id} className="bg-white p-4 rounded shadow">
-                      <div className="flex justify-between items-start flex-wrap gap-4">
-                        <div>
-                          <div className="text-lg font-semibold">{b.studentId?.firstName} {b.studentId?.lastName}</div>
-                          <div className="text-sm text-gray-600">Subject: {b.subject}</div>
-                          <div className="text-sm text-gray-600">Current: PKR {b.proposedPrice}</div>
+                    <div key={b._id} className="bg-white p-5 rounded-lg shadow border-l-4 border-purple-500">
+                      <div className="flex justify-between items-start flex-wrap gap-4 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xl font-bold text-gray-900 mb-3">
+                            {b.studentId?.firstName} {b.studentId?.lastName}
+                            {b.studentId?.email && <span className="ml-2 text-sm font-normal text-gray-500">({b.studentId.email})</span>}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-3">
+                            <div><span className="font-semibold text-gray-700">📚 Subject:</span> <span className="text-gray-800">{b.subject || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-700">💰 Current Price:</span> <span className="text-green-700 font-semibold">PKR {b.proposedPrice}</span></div>
+                            <div><span className="font-semibold text-gray-700">📅 Date:</span> <span>{b.proposedDate ? new Date(b.proposedDate).toLocaleDateString() : '—'}</span></div>
+                            <div><span className="font-semibold text-gray-700">📆 Day:</span> <span>{b.proposedDay || '—'}</span></div>
+                            <div><span className="font-semibold text-gray-700">🕐 Time:</span> <span>{b.proposedTime || '—'}</span></div>
+                          </div>
+                          {b.topicDescription && (
+                            <div className="bg-blue-50 border border-blue-100 rounded p-3 mb-2">
+                              <p className="text-xs font-semibold text-blue-700 mb-1">📝 Topic:</p>
+                              <p className="text-sm text-gray-800">{b.topicDescription}</p>
+                            </div>
+                          )}
                           {b.negotiationHistory?.length > 0 && (
-                            <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+                            <div className="mt-3 p-3 bg-gray-50 rounded border text-sm">
+                              <p className="font-semibold text-gray-700 mb-1">Negotiation History:</p>
                               {b.negotiationHistory.map((entry, idx) => (
-                                <p key={idx}>{entry.from}: PKR {entry.proposedPrice} {entry.message ? `— ${entry.message}` : ""}</p>
+                                <p key={idx} className={`py-1 border-b last:border-0 ${entry.from === 'tutor' ? 'text-blue-700' : 'text-gray-700'}`}>
+                                  <strong>{entry.from === 'tutor' ? 'You' : 'Student'}:</strong> PKR {entry.proposedPrice} {entry.message ? `— ${entry.message}` : ""}
+                                </p>
                               ))}
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className="w-full flex items-center gap-2 flex-wrap">
-                            <input type="datetime-local" value={acceptClassDueBy[b._id] || ""} onChange={(e) => setAcceptClassDueBy((p) => ({ ...p, [b._id]: e.target.value }))} className="border rounded px-2 py-1 text-sm" placeholder="Link due by" />
-                            <button onClick={() => acceptBooking(b._id, acceptClassDueBy[b._id] || undefined)} className="bg-green-600 text-white px-4 py-2 rounded">Accept</button>
-                          </div>
-                          <button onClick={() => rejectBooking(b._id)} className="bg-red-500 text-white px-4 py-2 rounded">Reject</button>
-                          <button onClick={() => adjustCounter(b._id, -50)} className="px-3 py-2 bg-gray-100 rounded">-50</button>
-                          <div className="px-4 py-2 border rounded">PKR {negotiationMap[b._id]}</div>
-                          <button onClick={() => adjustCounter(b._id, 50)} className="px-3 py-2 bg-gray-100 rounded">+50</button>
-                          <button onClick={() => sendCounterOffer(b._id)} className="bg-blue-600 text-white px-4 py-2 rounded">Send Counter Offer</button>
+                        <div className="flex flex-col gap-2 min-w-[160px]">
+                          <label className="text-xs text-gray-500">Link must be sent by (optional)</label>
+                          <input type="datetime-local" value={acceptClassDueBy[b._id] || ""} onChange={(e) => setAcceptClassDueBy((p) => ({ ...p, [b._id]: e.target.value }))} className="border rounded px-2 py-1 text-sm" />
+                          <button onClick={() => acceptBooking(b._id, acceptClassDueBy[b._id] || undefined)} className="bg-green-600 text-white px-4 py-2 rounded font-semibold">✅ Accept</button>
+                          <button onClick={() => rejectBooking(b._id)} className="bg-red-500 text-white px-4 py-2 rounded font-semibold">❌ Reject</button>
                         </div>
+                      </div>
+
+                      {/* Counter Offer Controls */}
+                      <div className="bg-gray-50 p-4 rounded border">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Update Counter Offer (PKR 300 – 2500):</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button onClick={() => adjustCounter(b._id, -50)} className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded font-bold">−50</button>
+                          <input
+                            type="number"
+                            min={300}
+                            max={2500}
+                            value={negotiationMap[b._id] ?? ''}
+                            onChange={(e) => setCounterDirect(b._id, e.target.value)}
+                            className="w-32 text-center border-2 border-purple-400 rounded px-3 py-2 font-bold text-lg"
+                          />
+                          <button onClick={() => adjustCounter(b._id, 50)} className="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded font-bold">+50</button>
+                          <span className="text-sm text-gray-500">PKR</span>
+                          <button
+                            onClick={() => {
+                              const amt = Number(negotiationMap[b._id]);
+                              if (amt < 300 || amt > 2500) { toast.error('Amount must be between PKR 300 and 2500'); return; }
+                              sendCounterOffer(b._id);
+                            }}
+                            className="ml-2 bg-blue-600 text-white px-5 py-2 rounded font-semibold"
+                          >
+                            Send Counter Offer
+                          </button>
+                        </div>
+                        {(negotiationMap[b._id] < 300 || negotiationMap[b._id] > 2500) && negotiationMap[b._id] !== '' && (
+                          <p className="text-red-500 text-xs mt-1">Amount must be between PKR 300 and 2500</p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -439,7 +558,13 @@ const TutorDashboard = () => {
                         <div>
                           <div className="text-lg font-semibold">{b.studentId?.firstName} {b.studentId?.lastName}</div>
                           <div className="text-sm text-gray-600">PKR {b.proposedPrice} • {b.proposedDate ? new Date(b.proposedDate).toLocaleString() : (b.proposedDay || "") + " " + (b.proposedTime || "")}</div>
-                          {b.sessionLink && <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm">Join class link</a>}
+                          {b.sessionLink && (
+                              b.sessionLinkDeadline && new Date() > new Date(b.sessionLinkDeadline) ? (
+                                  <span className="text-gray-400 text-sm cursor-not-allowed">Class Done / Link Expired</span>
+                              ) : (
+                                  <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm">Join class link</a>
+                              )
+                          )}
                         </div>
                         <div className="flex flex-col gap-2">
                           {(b.status === 'completed' || (b.studentMarkedDone && b.tutorMarkedDone)) ? (

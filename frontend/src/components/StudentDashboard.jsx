@@ -623,9 +623,15 @@ const StudentDashboard = () => {
                                                 </div>
                                                 <div className="flex flex-col gap-2 items-end">
                                                     {b.paymentStatus && b.paymentStatus !== 'pending' ? (
-                                                        <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg inline-flex items-center gap-2">
-                                                            Join class →
-                                                        </a>
+                                                        b.sessionLinkDeadline && new Date() > new Date(b.sessionLinkDeadline) ? (
+                                                            <span className="bg-gray-400 text-white font-semibold px-5 py-2 rounded-lg inline-flex items-center gap-2 cursor-not-allowed">
+                                                                Class Done / Link Expired
+                                                            </span>
+                                                        ) : (
+                                                            <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg inline-flex items-center gap-2">
+                                                                Join class →
+                                                            </a>
+                                                        )
                                                     ) : (
                                                         <span className="text-red-600 font-semibold">You must pay for this class to join</span>
                                                     )}
@@ -696,7 +702,13 @@ const StudentDashboard = () => {
                                                     <div>
                                                         <p className="font-semibold">{b.tutorId?.firstName} {b.tutorId?.lastName}</p>
                                                         <p className="text-sm text-gray-600">{b.subject} — PKR {b.proposedPrice}</p>
-                                                        <p className="text-xs text-gray-500">{b.status} {b.sessionLink && <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 ml-2">Join class</a>}</p>
+                                                        <p className="text-xs text-gray-500">{b.status} {b.sessionLink && (
+                                                            b.sessionLinkDeadline && new Date() > new Date(b.sessionLinkDeadline) ? (
+                                                                <span className="text-gray-400 ml-2 cursor-not-allowed">Class Done / Link Expired</span>
+                                                            ) : (
+                                                                <a href={b.sessionLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 ml-2">Join class</a>
+                                                            )
+                                                        )}</p>
                                                     </div>
                                                 </div>
                                                 {/* Payment, Accept, Reject options for accepted/confirmed bookings that are not paid, not completed, not marked done */}

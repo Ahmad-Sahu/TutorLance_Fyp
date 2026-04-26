@@ -616,14 +616,25 @@ export const markSessionDone = async (req, res) => {
 export const withdrawEarnings = async (req, res) => {
   try {
     const tutorId = req.tutor.id;
+    const { amount, paymentMethodId } = req.body;
+
     const tutor = await Tutor.findById(tutorId);
     if (!tutor) {
       return res.status(404).json({ message: "Tutor not found" });
     }
 
+    const withdrawAmount = Number(amount);
+    if (!withdrawAmount || withdrawAmount <= 0) {
+      return res.status(400).json({ message: "Invalid withdrawal amount" });
+    }
+
+    if (tutor.earnings < withdrawAmount) {
+      return res.status(400).json({ message: "Insufficient earnings" });
+    }
+
     // Implement Stripe payout here
-    // For now, just reset earnings
-    tutor.earnings = 0;
+    // For now, just deduct the withdrawn amount
+    tutor.earnings -= withdrawAmount;
     await tutor.save();
 
     res.status(200).json({ message: "Earnings withdrawn" });

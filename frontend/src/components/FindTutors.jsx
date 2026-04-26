@@ -9,6 +9,28 @@ import axios from 'axios';
 import Avatar from './Avatar';
 
 function FindTutors() {
+    const token = localStorage.getItem('token');
+    let loggedInName = null;
+    let dashboardPath = '/login';
+
+    if (token) {
+        try {
+            const studentData = localStorage.getItem('student');
+            const tutorData = localStorage.getItem('tutor');
+            if (studentData) {
+                const s = JSON.parse(studentData);
+                loggedInName = s.firstName || 'Dashboard';
+                dashboardPath = '/studentdashboard';
+            } else if (tutorData) {
+                const t = JSON.parse(tutorData);
+                loggedInName = t.firstName || 'Dashboard';
+                dashboardPath = '/tutordashboard';
+            } else if (localStorage.getItem('tutorId')) {
+                loggedInName = 'Dashboard';
+                dashboardPath = '/tutordashboard';
+            }
+        } catch (e) {}
+    }
     const navigate = useNavigate();
     const [tutors, setTutors] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -136,9 +158,15 @@ function FindTutors() {
 
                 <div className='flex items-center justify-between'>
                     <a className='flex items-center mr-8 font-semibold' href="">English <span className='text-4xl ml-2 font-bold'><MdExpandMore /></span></a>
-                    <Link to="/login">
-                        <button type="button" className='flex bg-blue-600 text-white py-3 px-6 border-4 border-white rounded-full font-semibold hover:bg-blue-700 transition-colors cursor-pointer'>
-                            <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login
+                    <Link to={dashboardPath}>
+                        <button type="button" className='flex items-center bg-blue-600 text-white py-3 px-6 border-4 border-white rounded-full font-semibold hover:bg-blue-700 transition-colors cursor-pointer'>
+                            {loggedInName ? (
+                                <span className='mr-2'>{loggedInName}'s Dashboard</span>
+                            ) : (
+                                <>
+                                    <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login
+                                </>
+                            )}
                         </button>
                     </Link>
                 </div>

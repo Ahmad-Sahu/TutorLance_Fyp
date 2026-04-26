@@ -71,22 +71,31 @@ const TutorProfileForm = ({
         if (trimmed.split(' ').length > 20) return false;
         return true;
     };
-    // Payment validation: min 300, max 3000
+    // Payment validation: min 300, max 2500
     const isValidAmount = (val) => {
         const num = Number(val);
-        return !isNaN(num) && num >= 300 && num <= 3000;
+        return !isNaN(num) && num >= 300 && num <= 2500;
     };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        // For hourlyRate, validate amount
+        // For hourlyRate, allow empty string (for clearing) or valid digits only; enforce on submit
         if (name === "hourlyRate") {
-            if (!isValidAmount(value)) return;
+            // Allow empty string or numeric-only input while typing
+            if (value !== '' && !/^\d+$/.test(value)) return;
         }
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
+    };
+
+    const adjustHourlyRate = (delta) => {
+        setFormData(prev => {
+            const current = Number(prev.hourlyRate) || 300;
+            const next = Math.min(2500, Math.max(300, current + delta));
+            return { ...prev, hourlyRate: String(next) };
+        });
     };
 
     const handleArrayInput = (field, value) => {
@@ -131,7 +140,7 @@ const TutorProfileForm = ({
         // Validate all fields
         if (!formData.subjects.length) return toast.error("Select at least 1 subject");
         if (formData.subjects.length > 3) return toast.error("Select up to 3 subjects");
-        if (!isValidAmount(formData.hourlyRate)) return toast.error("Hourly rate must be between 300 and 3000");
+        if (!isValidAmount(formData.hourlyRate)) return toast.error("Hourly rate must be between 300 and 2500");
         if (!isValidText(formData.countryOfBirth)) return toast.error("Country of birth required");
         if (!formData.specialities.length) return toast.error("Select a speciality");
         if (!formData.languages.length) return toast.error("Select at least one language");
@@ -217,19 +226,38 @@ const TutorProfileForm = ({
                     {/* Hourly Rate */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Hourly Rate (PKR, 300-3000)
+                            Hourly Rate (PKR, 300–2500)
                         </label>
-                        <input
-                            type="number"
-                            placeholder="e.g., 1500"
-                            value={formData.hourlyRate}
-                            onChange={handleInputChange}
-                            name="hourlyRate"
-                            min={300}
-                            max={3000}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            required
-                        />
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => adjustHourlyRate(-50)}
+                                className="px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg text-lg font-bold transition"
+                                title="Decrease by 50"
+                            >
+                                −
+                            </button>
+                            <input
+                                type="number"
+                                placeholder="e.g., 1500"
+                                value={formData.hourlyRate}
+                                onChange={handleInputChange}
+                                name="hourlyRate"
+                                min={300}
+                                max={2500}
+                                className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-semibold"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => adjustHourlyRate(50)}
+                                className="px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg text-lg font-bold transition"
+                                title="Increase by 50"
+                            >
+                                +
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Use buttons (+/−) to adjust by 50, or type a value between 300 and 2500</p>
                     </div>
 
                     {/* Country of Birth */}
