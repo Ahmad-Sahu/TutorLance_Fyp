@@ -77,15 +77,14 @@ const StudentBookingOffers = ({ studentId }) => {
 
   const adjustPrice = (bookingId, delta) => {
     const b = bookings.find((x) => x._id === bookingId);
-    const current = negotiationPrice[bookingId] ?? b?.proposedPrice ?? 0;
-    setNegotiationPrice((prev) => ({ ...prev, [bookingId]: Math.max(0, current + delta) }));
+    const current = negotiationPrice[bookingId] ?? b?.proposedPrice ?? 300;
+    setNegotiationPrice((prev) => ({ ...prev, [bookingId]: Math.min(2500, Math.max(300, Number(current) + delta)) }));
   };
 
   const handleSendCounter = async (bookingId) => {
     const price = negotiationPrice[bookingId];
-    const b = bookings.find((x) => x._id === bookingId);
-    if (price == null || price <= 0) {
-      toast.error("Enter a valid amount");
+    if (price == null || price < 300 || price > 2500) {
+      toast.error("Amount must be between PKR 300 and 2500");
       return;
     }
     try {
@@ -225,9 +224,19 @@ const StudentBookingOffers = ({ studentId }) => {
                 >
                   -50
                 </button>
-                <div className="px-4 py-2 border rounded bg-white font-semibold">
-                  PKR {currentPrice}
-                </div>
+                <input
+                  type="number"
+                  min="300"
+                  max="2500"
+                  value={currentPrice === '' ? '' : currentPrice}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d+$/.test(val)) {
+                      setNegotiationPrice((prev) => ({ ...prev, [booking._id]: val === '' ? '' : Number(val) }));
+                    }
+                  }}
+                  className="w-24 px-4 py-2 border rounded bg-white font-semibold text-center"
+                />
                 <button
                   onClick={() => adjustPrice(booking._id, 50)}
                   className="px-3 py-2 bg-gray-100 rounded font-bold"

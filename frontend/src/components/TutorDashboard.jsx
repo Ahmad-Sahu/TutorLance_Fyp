@@ -408,9 +408,22 @@ const TutorDashboard = () => {
                             </div>
                           )}
                           {b.message && (
-                            <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                            <div className="bg-gray-50 border border-gray-200 rounded p-3 mb-2">
                               <p className="text-xs font-semibold text-gray-600 mb-1">💬 Student Message:</p>
                               <p className="text-sm text-gray-700">{b.message}</p>
+                            </div>
+                          )}
+                          {b.negotiationHistory?.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                              <p className="text-xs font-semibold text-blue-800 mb-2">🔄 Negotiation History:</p>
+                              <div className="space-y-1 text-xs text-gray-700">
+                                {b.negotiationHistory.map((entry, idx) => (
+                                  <p key={idx}>
+                                    <strong className="text-blue-900">{entry.from === 'student' ? 'Student' : 'You'}</strong>: PKR {entry.proposedPrice}
+                                    {entry.message && <span className="text-gray-600"> — "{entry.message}"</span>}
+                                  </p>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
