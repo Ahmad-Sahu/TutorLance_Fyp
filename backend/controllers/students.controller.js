@@ -5,30 +5,25 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { sendOtpEmail } from "../utils/send-email.js";
+import { emailSchema, nameSchema, normalizeEmail, normalizeName, passwordSchema } from "../utils/authValidation.js";
 
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const signup = async (req, res) => {
-  const { role, firstName, lastName, email, password } = req.body;
+  let { role, firstName, lastName, email, password } = req.body;
+  firstName = normalizeName(firstName);
+  lastName = normalizeName(lastName);
+  email = normalizeEmail(email);
 
   const signupSchema = z.object({
     role: z.enum(["tutor", "student", "freelancer", "admin"]),
-    firstName: z.string()
-      .min(2, { message: "First name must be at least 2 characters long" })
-      .max(15, { message: "First name must be at most 15 characters" })
-      .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" }),
-    lastName: z.string()
-      .min(2, { message: "Last name must be at least 2 characters long" })
-      .max(15, { message: "Last name must be at most 15 characters" })
-      .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" }),
-    email: z.string().email({ message: "Invalid email format" }),
-    password: z.string()
-      .min(6, { message: "Password must be at least 6 characters long" })
-      .max(15, { message: "Password must be at most 15 characters" })
-      .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
+    firstName: nameSchema("First name"),
+    lastName: nameSchema("Last name"),
+    email: emailSchema,
+    password: passwordSchema,
   });
 
-  const validation = signupSchema.safeParse(req.body);
+  const validation = signupSchema.safeParse({ role, firstName, lastName, email, password });
   if (!validation.success) {
     return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
   }
@@ -37,7 +32,7 @@ export const signup = async (req, res) => {
     const existingStudent = await Student.findOne({ email });
     if (existingStudent) {
       return res.status(400).json({
-        message: "Student with this email already exists. Please login or use a different email.",
+        message: "User with this email already exists in student role, use another valid email.",
         field: "email",
         role: "student"
       });
@@ -77,7 +72,8 @@ export const signup = async (req, res) => {
 }
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
+  if (email) email = email.toLowerCase();
 
   try {
     const student = await Student.findOne({ email });
@@ -129,7 +125,8 @@ export const login = async (req, res) => {
 // ✅ Verify student OTP
 export const verifyStudentOtp = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    let { email, code } = req.body;
+    if (email) email = email.toLowerCase();
     if (!email || !code) {
       return res.status(400).json({ message: "Email and code are required" });
     }
@@ -168,7 +165,8 @@ export const verifyStudentOtp = async (req, res) => {
 // ✅ Resend student OTP
 export const resendStudentOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
+    if (email) email = email.toLowerCase();
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const student = await Student.findOne({ email });
@@ -265,25 +263,16 @@ export const updateStudentProfile = async (req, res) => {
   try {
     const studentId = req.student.id;
     const updates = req.body;
+    if (updates.firstName) updates.firstName = normalizeName(updates.firstName);
+    if (updates.lastName) updates.lastName = normalizeName(updates.lastName);
+    if (updates.email) updates.email = normalizeEmail(updates.email);
 
     // Zod validation (same as signup, but all fields optional)
     const updateSchema = z.object({
-      firstName: z.string()
-        .min(2, { message: "First name must be at least 2 characters long" })
-        .max(15, { message: "First name must be at most 15 characters" })
-        .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" })
-        .optional(),
-      lastName: z.string()
-        .min(2, { message: "Last name must be at least 2 characters long" })
-        .max(15, { message: "Last name must be at most 15 characters" })
-        .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" })
-        .optional(),
-      email: z.string().email({ message: "Invalid email format" }).optional(),
-      password: z.string()
-        .min(6, { message: "Password must be at least 6 characters long" })
-        .max(15, { message: "Password must be at most 15 characters" })
-        .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
-        .optional(),
+      firstName: nameSchema("First name").optional(),
+      lastName: nameSchema("Last name").optional(),
+      email: emailSchema.optional(),
+      password: passwordSchema.optional(),
     });
     const validation = updateSchema.safeParse(updates);
     if (!validation.success) {

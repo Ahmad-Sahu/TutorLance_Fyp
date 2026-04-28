@@ -21,19 +21,23 @@ const StudentProfileSection = ({ student }) => {
     const [profilePicturePreview, setProfilePicturePreview] = useState(student?.profilePicture || '');
     const [loading, setLoading] = useState(false);
 
-    // Strict text validation: only spaces between words, no leading/trailing/multiple spaces, max 20 words
-    const isValidText = (val) => {
+    // Strict text validation: only English letters and single spaces, no leading/trailing/multiple spaces, max 15 chars
+    const isValidName = (val) => {
         if (!val) return false;
         const trimmed = val.trim();
         if (!trimmed) return false;
         if (/  +/.test(trimmed)) return false;
-        if (!/^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/.test(trimmed)) return false;
-        if (trimmed.split(' ').length > 20) return false;
+        if (!/^[A-Za-z]+( [A-Za-z]+)*$/.test(trimmed)) return false;
+        if (trimmed.length > 15) return false;
         return true;
     };
     const handleInputChange = (field, value) => {
-        // For name fields, disallow spaces-only
-        if ((field === 'firstName' || field === 'lastName') && !isValidText(value)) return;
+        if (field === 'firstName' || field === 'lastName') {
+            // Only allow letters and single spaces
+            value = value.replace(/[^A-Za-z ]/g, "");
+            value = value.replace(/  +/g, " ");
+            value = value.replace(/^ +/, "");
+        }
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -71,8 +75,8 @@ const StudentProfileSection = ({ student }) => {
 
     const handleSave = async () => {
         // Validate names
-        if (!isValidText(formData.firstName)) return toast.error('First name required (no spaces only, max 20 words)');
-        if (!isValidText(formData.lastName)) return toast.error('Last name required (no spaces only, max 20 words)');
+        if (!isValidName(formData.firstName)) return toast.error(formData.firstName.trim().length > 15 ? 'First name cannot exceed 15 characters.' : 'First name must contain only letters, no symbols.');
+        if (!isValidName(formData.lastName)) return toast.error(formData.lastName.trim().length > 15 ? 'Last name cannot exceed 15 characters.' : 'Last name must contain only letters, no symbols.');
         setLoading(true);
         try {
             let profilePictureUrl = student?.profilePicture;
@@ -180,12 +184,16 @@ const StudentProfileSection = ({ student }) => {
                             First Name
                         </label>
                         {isEditing ? (
-                            <input
-                                type="text"
-                                value={formData.firstName}
-                                onChange={(e) => handleInputChange('firstName', e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
+                            <>
+                                <input
+                                    type="text"
+                                    value={formData.firstName}
+                                    maxLength={15}
+                                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                {formData.firstName.length >= 15 && <p className="text-red-500 text-xs mt-1">First name cannot exceed 15 characters.</p>}
+                            </>
                         ) : (
                             <p className="text-gray-900 p-3 bg-gray-50 rounded-lg">{student?.firstName}</p>
                         )}
@@ -197,12 +205,16 @@ const StudentProfileSection = ({ student }) => {
                             Last Name
                         </label>
                         {isEditing ? (
-                            <input
-                                type="text"
-                                value={formData.lastName}
-                                onChange={(e) => handleInputChange('lastName', e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
+                            <>
+                                <input
+                                    type="text"
+                                    value={formData.lastName}
+                                    maxLength={15}
+                                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                {formData.lastName.length >= 15 && <p className="text-red-500 text-xs mt-1">Last name cannot exceed 15 characters.</p>}
+                            </>
                         ) : (
                             <p className="text-gray-900 p-3 bg-gray-50 rounded-lg">{student?.lastName}</p>
                         )}

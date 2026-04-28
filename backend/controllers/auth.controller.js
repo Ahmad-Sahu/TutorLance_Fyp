@@ -4,14 +4,15 @@ import { Student } from "../models/students.model.js";
 import { Tutor } from "../models/tutors.model.js";
 import { Freelancer } from "../models/freelancers.model.js";
 import { Admin } from "../models/admin.model.js";
+import { emailSchema, normalizeEmail, passwordSchema } from "../utils/authValidation.js";
 
 // Handle forgot password for any role
 export const forgotPassword = async (req, res) => {
   const schema = z.object({
     role: z.enum(["tutor", "student", "freelancer", "admin"]),
-    email: z.string().email({ message: "Invalid email format" }),
-    newPassword: z.string().min(6, { message: "Password must be at least 6 characters long" }).max(100),
-    confirmPassword: z.string().min(6).max(100),
+    email: emailSchema,
+    newPassword: passwordSchema,
+    confirmPassword: passwordSchema,
   });
 
   const validation = schema.safeParse(req.body);
@@ -19,7 +20,8 @@ export const forgotPassword = async (req, res) => {
     return res.status(400).json({ errors: validation.error.issues.map(i => i.message) });
   }
 
-  const { role, email, newPassword, confirmPassword } = req.body;
+  let { role, email, newPassword, confirmPassword } = req.body;
+  email = normalizeEmail(email);
 
   if (newPassword !== confirmPassword) {
     return res.status(400).json({ message: "Passwords do not match" });

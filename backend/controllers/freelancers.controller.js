@@ -80,6 +80,7 @@ import dotenv from "dotenv";
 import { Freelancer } from "../models/freelancers.model.js";
 import { sendOtpEmail } from "../utils/send-email.js";
 import { z } from "zod";
+import { emailSchema, nameSchema, normalizeEmail, normalizeName, passwordSchema } from "../utils/authValidation.js";
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 dotenv.config();
 
@@ -90,25 +91,27 @@ export const registerFreelancer = async (req, res) => {
   try {
     // Accept both formats: (firstName + lastName) or (name)
     let { name, email, password, skills, experience, firstName, lastName } = req.body;
+    email = normalizeEmail(email);
 
-    // Zod schema for validation
+    // If firstName/lastName not provided, try to split from name
+    if (!firstName && name) {
+      const parts = normalizeName(name).split(" ");
+      firstName = parts[0];
+      lastName = parts.slice(1).join(" ") || "";
+    }
+    firstName = normalizeName(firstName);
+    lastName = normalizeName(lastName);
+
+    // Validate
     const freelancerSchema = z.object({
-      firstName: z.string().min(2, { message: "First name must be at least 2 characters long" }).max(15, { message: "First name must be at most 15 characters" }).regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" }),
-      lastName: z.string().min(2, { message: "Last name must be at least 2 characters long" }).max(15, { message: "Last name must be at most 15 characters" }).regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" }),
-      email: z.string().email({ message: "Invalid email format" }),
-      password: z.string().min(6, { message: "Password must be at least 6 characters long" }).max(15, { message: "Password must be at most 15 characters" }).regex(/^[^\s]+$/, { message: "Password must not contain spaces" }),
+      firstName: nameSchema("First name"),
+      lastName: nameSchema("Last name"),
+      email: emailSchema,
+      password: passwordSchema,
       skills: z.string().optional(),
       experience: z.string().optional(),
     });
 
-    // If firstName/lastName not provided, try to split from name
-    if (!firstName && name) {
-      const parts = name.split(" ");
-      firstName = parts[0];
-      lastName = parts.slice(1).join(" ") || "";
-    }
-
-    // Validate
     const validation = freelancerSchema.safeParse({ firstName, lastName, email, password, skills, experience });
     if (!validation.success) {
       return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
@@ -121,7 +124,7 @@ export const registerFreelancer = async (req, res) => {
     const existing = await Freelancer.findOne({ email });
     if (existing) {
       return res.status(400).json({
-        message: "Freelancer with this email already exists. Please login or use a different email.",
+        message: "User with this email already exists in freelancer role, use another valid email.",
         field: "email",
         role: "freelancer"
       });
@@ -132,8 +135,8 @@ export const registerFreelancer = async (req, res) => {
     const expires = new Date(Date.now() + 5 * 60 * 1000);
 
     const newFreelancer = new Freelancer({
-      firstname: firstName || name.split(" ")[0] || name,
-      lastname: lastName || name.split(" ").slice(1).join(" ") || "",
+      firstname: firstName || normalizeName(name).split(" ")[0] || name,
+      lastname: lastName || normalizeName(name).split(" ").slice(1).join(" ") || "",
       name,
       email,
       password: hashedPassword,
@@ -165,7 +168,8 @@ export const registerFreelancer = async (req, res) => {
 ============================== */
 export const loginFreelancer = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = normalizeEmail(email);
     const freelancer = await Freelancer.findOne({ email });
     if (!freelancer) return res.status(404).json({ message: "No freelancer found with this email. Please check your credentials or sign up first.", field: "email", role: "freelancer" });
 
@@ -195,7 +199,8 @@ export const loginFreelancer = async (req, res) => {
 // ✅ Verify freelancer OTP
 export const verifyFreelancerOtp = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    let { email, code } = req.body;
+    email = normalizeEmail(email);
     if (!email || !code) {
       return res.status(400).json({ message: "Email and code are required" });
     }
@@ -234,7 +239,8 @@ export const verifyFreelancerOtp = async (req, res) => {
 // ✅ Resend freelancer OTP
 export const resendFreelancerOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
+    email = normalizeEmail(email);
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const freelancer = await Freelancer.findOne({ email });
@@ -283,25 +289,16 @@ export const getFreelancerProfile = async (req, res) => {
 export const updateFreelancerProfile = async (req, res) => {
   try {
     const updates = req.body;
+    if (updates.firstName) updates.firstName = normalizeName(updates.firstName);
+    if (updates.lastName) updates.lastName = normalizeName(updates.lastName);
+    if (updates.email) updates.email = normalizeEmail(updates.email);
 
     // Zod validation (same as signup, but all fields optional)
     const updateSchema = z.object({
-      firstName: z.string()
-        .min(2, { message: "First name must be at least 2 characters long" })
-        .max(15, { message: "First name must be at most 15 characters" })
-        .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" })
-        .optional(),
-      lastName: z.string()
-        .min(2, { message: "Last name must be at least 2 characters long" })
-        .max(15, { message: "Last name must be at most 15 characters" })
-        .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" })
-        .optional(),
-      email: z.string().email({ message: "Invalid email format" }).optional(),
-      password: z.string()
-        .min(6, { message: "Password must be at least 6 characters long" })
-        .max(15, { message: "Password must be at most 15 characters" })
-        .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
-        .optional(),
+      firstName: nameSchema("First name").optional(),
+      lastName: nameSchema("Last name").optional(),
+      email: emailSchema.optional(),
+      password: passwordSchema.optional(),
     });
     const validation = updateSchema.safeParse(updates);
     if (!validation.success) {

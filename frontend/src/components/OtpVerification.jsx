@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { sanitizeEmailInput, validateEmail } from "../utils/authValidation";
 
 const API_BASE = "http://localhost:3000/api/v1";
 
@@ -34,7 +35,7 @@ const OtpVerification = () => {
         resend: `${API_BASE}/freelancers/resend-otp`,
       };
     }
-    // default fallback
+
     return {
       verify: `${API_BASE}/students/verify-otp`,
       resend: `${API_BASE}/students/resend-otp`,
@@ -42,11 +43,19 @@ const OtpVerification = () => {
   };
 
   const handleVerify = async () => {
-    if (!email || otp.length !== 6) {
-      toast.error("Enter your email and 6‑digit OTP.");
+    const emailError = validateEmail(email);
+    if (emailError) {
+      toast.error(emailError);
       return;
     }
+
+    if (otp.length !== 6) {
+      toast.error("Enter your 6-digit OTP.");
+      return;
+    }
+
     const { verify } = resolveEndpoints();
+
     try {
       setLoading(true);
       const res = await axios.post(verify, { email, code: otp });
@@ -63,11 +72,14 @@ const OtpVerification = () => {
   };
 
   const handleResend = async () => {
-    if (!email) {
-      toast.error("Enter your email first.");
+    const emailError = validateEmail(email);
+    if (emailError) {
+      toast.error(emailError);
       return;
     }
+
     const { resend } = resolveEndpoints();
+
     try {
       setLoading(true);
       const res = await axios.post(resend, { email });
@@ -85,16 +97,13 @@ const OtpVerification = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="bg-white w-[400px] rounded-xl shadow-lg border border-gray-200 p-6">
-        <h1 className="text-2xl font-bold text-center mb-4">
-          Verify your email
-        </h1>
+        <h1 className="text-2xl font-bold text-center mb-4">Verify your email</h1>
         <p className="text-sm text-gray-600 mb-4 text-center">
-          We have sent a 6‑digit OTP to{" "}
+          We have sent a 6-digit OTP to{" "}
           <span className="font-semibold">{initialEmail || "your email"}</span>.
           Enter it below to complete your registration.
         </p>
 
-        {/* Role (readonly when coming from signup) */}
         <label className="block mb-2 text-sm font-semibold">Role</label>
         <select
           value={role}
@@ -106,29 +115,27 @@ const OtpVerification = () => {
           <option value="freelancer">Freelancer</option>
         </select>
 
-        {/* Email */}
         <label className="block mb-2 text-sm font-semibold">Email</label>
         <input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmail(sanitizeEmailInput(e.target.value))}
           className="w-full border border-gray-300 rounded-lg p-2 mb-4"
           placeholder="user@example.com"
         />
 
-        {/* 6‑digit OTP input */}
-        <label className="block mb-2 text-sm font-semibold">6‑digit OTP</label>
+        <label className="block mb-2 text-sm font-semibold">6-digit OTP</label>
         <input
           type="text"
           inputMode="numeric"
           maxLength={6}
           value={otp}
           onChange={(e) => {
-            const v = e.target.value.replace(/\D/g, "");
-            if (v.length <= 6) setOtp(v);
+            const value = e.target.value.replace(/\D/g, "");
+            if (value.length <= 6) setOtp(value);
           }}
           className="w-full border border-gray-300 rounded-lg p-2 mb-4 tracking-[0.5em] text-center text-lg"
-          placeholder="••••••"
+          placeholder="......"
         />
 
         <button
@@ -154,4 +161,3 @@ const OtpVerification = () => {
 };
 
 export default OtpVerification;
-

@@ -3,6 +3,7 @@ import { Booking } from '../models/Booking.model.js';
 import { Student } from '../models/students.model.js';
 import bcrypt from "bcryptjs";
 import {z} from "zod";
+import { emailSchema, nameSchema, normalizeEmail, normalizeName, passwordSchema } from "../utils/authValidation.js";
 
 
 export const signup = async (req, res) => {
@@ -96,12 +97,31 @@ const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString(
 // ✅ Tutor Signup Controller
 export const tutorSignup = async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    let { firstName, lastName, email, password } = req.body;
+    firstName = normalizeName(firstName);
+    lastName = normalizeName(lastName);
+    email = normalizeEmail(email);
+
+    const signupSchema = z.object({
+      firstName: nameSchema("First name"),
+      lastName: nameSchema("Last name"),
+      email: emailSchema,
+      password: passwordSchema,
+    });
+
+    const validation = signupSchema.safeParse({ firstName, lastName, email, password });
+    if (!validation.success) {
+      return res.status(400).json({ errors: validation.error.issues.map((err) => err.message) });
+    }
 
     // Check if tutor already exists
     const existingTutor = await Tutor.findOne({ email });
     if (existingTutor) {
-      return res.status(400).json({ message: "Tutor already registered" });
+      return res.status(400).json({
+        message: "User with this email already exists in tutor role, use another valid email.",
+        field: "email",
+        role: "tutor",
+      });
     }
 
     // Hash password
@@ -141,7 +161,8 @@ export const tutorSignup = async (req, res) => {
 
 // ✅ Tutor Login Controller
 export const tutorLogin = async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
+  email = normalizeEmail(email);
 
   try {
     // Check if tutor exists
@@ -188,7 +209,8 @@ export const tutorLogin = async (req, res) => {
 // ✅ Verify tutor OTP
 export const verifyTutorOtp = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    let { email, code } = req.body;
+    if (email) email = email.toLowerCase();
     if (!email || !code) {
       return res.status(400).json({ message: "Email and code are required" });
     }
@@ -227,7 +249,8 @@ export const verifyTutorOtp = async (req, res) => {
 // ✅ Resend tutor OTP
 export const resendTutorOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
+    if (email) email = email.toLowerCase();
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const tutor = await Tutor.findOne({ email });
@@ -340,25 +363,16 @@ export const updateTutorProfile = async (req, res) => {
   try {
     const tutorId = req.tutor.id;
     const updates = req.body;
+    if (updates.firstName) updates.firstName = normalizeName(updates.firstName);
+    if (updates.lastName) updates.lastName = normalizeName(updates.lastName);
+    if (updates.email) updates.email = normalizeEmail(updates.email);
 
     // Zod validation (same as signup, but all fields optional)
     const updateSchema = z.object({
-      firstName: z.string()
-        .min(2, { message: "First name must be at least 2 characters long" })
-        .max(15, { message: "First name must be at most 15 characters" })
-        .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" })
-        .optional(),
-      lastName: z.string()
-        .min(2, { message: "Last name must be at least 2 characters long" })
-        .max(15, { message: "Last name must be at most 15 characters" })
-        .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" })
-        .optional(),
-      email: z.string().email({ message: "Invalid email format" }).optional(),
-      password: z.string()
-        .min(6, { message: "Password must be at least 6 characters long" })
-        .max(15, { message: "Password must be at most 15 characters" })
-        .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
-        .optional(),
+      firstName: nameSchema("First name").optional(),
+      lastName: nameSchema("Last name").optional(),
+      email: emailSchema.optional(),
+      password: passwordSchema.optional(),
     });
     const validation = updateSchema.safeParse(updates);
     if (!validation.success) {

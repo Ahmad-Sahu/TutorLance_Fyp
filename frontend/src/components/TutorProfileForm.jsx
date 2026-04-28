@@ -61,15 +61,19 @@ const TutorProfileForm = ({
         }
     }, [navigate]);
 
-    // Strict text validation: only spaces between words, no leading/trailing/multiple spaces, max 20 words
-    const isValidText = (val) => {
+    // Strict text validation: only English letters and single spaces, no leading/trailing/multiple spaces, max 15 chars
+    const isValidName = (val) => {
         if (!val) return false;
         const trimmed = val.trim();
         if (!trimmed) return false;
         if (/  +/.test(trimmed)) return false;
-        if (!/^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/.test(trimmed)) return false;
-        if (trimmed.split(' ').length > 20) return false;
+        if (!/^[A-Za-z]+( [A-Za-z]+)*$/.test(trimmed)) return false;
+        if (trimmed.length > 15) return false;
         return true;
+    };
+    const isValidText = (val) => {
+        if (typeof val !== "string") return false;
+        return val.trim().length > 0;
     };
     // Payment validation: min 300, max 2500
     const isValidAmount = (val) => {
@@ -78,11 +82,15 @@ const TutorProfileForm = ({
     };
 
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        // For hourlyRate, allow empty string (for clearing) or valid digits only; enforce on submit
+        const { name } = e.target;
+        let value = e.target.value;
         if (name === "hourlyRate") {
-            // Allow empty string or numeric-only input while typing
             if (value !== '' && !/^\d+$/.test(value)) return;
+        }
+        if (name === "firstName" || name === "lastName") {
+            value = value.replace(/[^A-Za-z ]/g, "");
+            value = value.replace(/  +/g, " ");
+            value = value.replace(/^ +/, "");
         }
         setFormData(prev => ({
             ...prev,

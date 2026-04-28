@@ -58,7 +58,15 @@ const FreelancerInfoForm = () => {
     }
   };
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    let { name, value } = e.target;
+    if (name === "name") {
+      value = value.replace(/[^A-Za-z ]/g, "");
+      value = value.replace(/  +/g, " ");
+      value = value.replace(/^ +/, "");
+    }
+    setForm({ ...form, [name]: value });
+  };
 
   const parseDob = (dobStr) => {
     // Expect dd/mm/yyyy format

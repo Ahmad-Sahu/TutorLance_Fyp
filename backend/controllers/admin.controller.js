@@ -7,27 +7,22 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {z} from "zod";
 import { sendOtpEmail } from "../utils/send-email.js";
+import { emailSchema, nameSchema, normalizeEmail, normalizeName, passwordSchema } from "../utils/authValidation.js";
 
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const signup = async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
+  let { firstName, lastName, email, password } = req.body;
+  firstName = normalizeName(firstName);
+  lastName = normalizeName(lastName);
+  email = normalizeEmail(email);
   const role = 'admin';
 
   const signupSchema = z.object({
-    firstName: z.string()
-      .min(2, { message: "First name must be at least 2 characters long" })
-      .max(100)
-      .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" }),
-    lastName: z.string()
-      .min(2, { message: "Last name must be at least 2 characters long" })
-      .max(100)
-      .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" }),
-    email: z.string().email({ message: "Invalid email format" }),
-    password: z.string()
-      .min(6, { message: "Password must be at least 6 characters long" })
-      .max(100)
-      .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
+    firstName: nameSchema("First name"),
+    lastName: nameSchema("Last name"),
+    email: emailSchema,
+    password: passwordSchema,
   });
 
   const validation = signupSchema.safeParse({ firstName, lastName, email, password });
@@ -38,7 +33,11 @@ export const signup = async (req, res) => {
   try {
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
-      return res.status(400).json({ message: "Admin already exists" });
+      return res.status(400).json({
+        message: "User with this email already exists in admin role, use another valid email.",
+        field: "email",
+        role: "admin",
+      });
     }
 
     // Hash password
@@ -73,7 +72,8 @@ export const signup = async (req, res) => {
 
 // Admin OTP verification endpoint
 export const verifyAdminOtp = async (req, res) => {
-  const { email, otp } = req.body;
+  let { email, otp } = req.body;
+  if (email) email = email.toLowerCase();
   try {
     const admin = await Admin.findOne({ email });
     if (!admin) {
@@ -102,11 +102,12 @@ export const verifyAdminOtp = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = normalizeEmail(email);
 
     const loginSchema = z.object({
-        email: z.string().email({ message: "Invalid email format" }),
-        password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
+        email: emailSchema,
+        password: passwordSchema,
     });
 
     const validation = loginSchema.safeParse({ email, password });
