@@ -58,7 +58,7 @@ const FreelancerInfoForm = ({
         ? initialData
         : (() => {
             try {
-              return JSON.parse(localStorage.getItem("freelancer") || "{}");
+              return JSON.parse(localStorage.getItem("freelancerFormDraft") || "{}") || JSON.parse(localStorage.getItem("freelancer") || "{}");
             } catch {
               return {};
             }
@@ -80,7 +80,11 @@ const FreelancerInfoForm = ({
       picture: sourceData.picture || "",
       cnicImage: sourceData.cnicImage || "",
     });
-  }, [initialData]);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("freelancerFormDraft", JSON.stringify(form));
+  }, [form]);
 
   const uploadToCloudinary = async (file) => {
     if (!file) return null;
@@ -223,6 +227,7 @@ const FreelancerInfoForm = ({
 
       if (savedFreelancer) {
         localStorage.setItem("freelancer", JSON.stringify(savedFreelancer));
+        localStorage.removeItem("freelancerFormDraft");
       }
 
       localStorage.setItem("freelancerProfileCompleted", "true");
@@ -281,7 +286,26 @@ const FreelancerInfoForm = ({
 
         <div>
           <label className="block font-semibold">Domain</label>
-          <input name="domain" value={form.domain} onChange={handleChange} className="w-full border rounded p-2" required />
+          <select
+            name="domain"
+            value={form.domain}
+            onChange={handleChange}
+            className="w-full border rounded p-2"
+            required
+          >
+            <option value="">Select Domain</option>
+            <option value="Flutter">Flutter</option>
+            <option value="Web Development">Web Development</option>
+            <option value="UI/UX">UI/UX</option>
+            <option value="Python">Python</option>
+            <option value="Mobile Development">Mobile Development</option>
+            <option value="Data Science">Data Science</option>
+            <option value="Machine Learning">Machine Learning</option>
+            <option value="JavaScript">JavaScript</option>
+            <option value="Java">Java</option>
+            <option value="C++">C++</option>
+            <option value="Other">Other</option>
+          </select>
           {errors.domain && <p className="text-red-500 text-xs mt-1">{errors.domain}</p>}
         </div>
 
