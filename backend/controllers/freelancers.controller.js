@@ -79,6 +79,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { Freelancer } from "../models/freelancers.model.js";
 import { sendOtpEmail } from "../utils/send-email.js";
+import { sendVerificationEmail } from "../utils/email.js";
 import { z } from "zod";
 import { emailSchema, nameSchema, normalizeEmail, normalizeName, passwordSchema } from "../utils/authValidation.js";
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -142,6 +143,7 @@ export const registerFreelancer = async (req, res) => {
       password: hashedPassword,
       skills,
       experience,
+      profileCompleted: false,
       isVerified: false,
       otp: code,
       otpExpiry: expires,
@@ -189,7 +191,11 @@ export const loginFreelancer = async (req, res) => {
     res.status(200).json({
       message: "Login successful",
       token,
-      freelancer,
+      freelancer: {
+        ...freelancer.toObject(),
+        name: freelancer.name || `${freelancer.firstname} ${freelancer.lastname}`.trim(),
+        profileCompleted: Boolean(freelancer.profileCompleted),
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -277,7 +283,11 @@ export const getFreelancerProfile = async (req, res) => {
     if (!freelancer) return res.status(404).json({ message: "Freelancer not found" });
     // Sort notifications so frontend sees newest first
     freelancer.notifications = (freelancer.notifications || []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-    res.status(200).json(freelancer);
+    res.status(200).json({
+      ...freelancer.toObject(),
+      name: freelancer.name || `${freelancer.firstname} ${freelancer.lastname}`.trim(),
+      profileCompleted: Boolean(freelancer.profileCompleted),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -288,25 +298,100 @@ export const getFreelancerProfile = async (req, res) => {
 ============================== */
 export const updateFreelancerProfile = async (req, res) => {
   try {
-    const updates = req.body;
+    const updates = { ...req.body };
     if (updates.firstName) updates.firstName = normalizeName(updates.firstName);
     if (updates.lastName) updates.lastName = normalizeName(updates.lastName);
+    if (updates.firstname) updates.firstname = normalizeName(updates.firstname);
+    if (updates.lastname) updates.lastname = normalizeName(updates.lastname);
     if (updates.email) updates.email = normalizeEmail(updates.email);
+    if (updates.name) updates.name = normalizeName(updates.name);
+    if (updates.domain) updates.domain = updates.domain.trim();
+    if (updates.skills) updates.skills = updates.skills.trim();
+    if (updates.description) updates.description = updates.description.trim();
+    if (updates.cnicNumber) updates.cnicNumber = updates.cnicNumber.trim();
+    if (updates.youtubeUrl) updates.youtubeUrl = updates.youtubeUrl.trim();
 
-    // Zod validation (same as signup, but all fields optional)
+    if (updates.name && (!updates.firstname || !updates.lastname)) {
+      const parts = normalizeName(updates.name).split(" ");
+      updates.firstname = updates.firstname || parts[0] || "";
+      updates.lastname = updates.lastname || parts.slice(1).join(" ") || "";
+    }
+
+    const nonEmptyTrimmedString = (label) =>
+      z.string().trim().min(1, { message: `${label} is required` });
+
     const updateSchema = z.object({
       firstName: nameSchema("First name").optional(),
       lastName: nameSchema("Last name").optional(),
+      firstname: nameSchema("First name").optional(),
+      lastname: nameSchema("Last name").optional(),
+      name: z
+        .string()
+        .trim()
+        .min(3, { message: "Full name is required" })
+        .max(31, { message: "Full name must be at most 31 characters" })
+        .regex(/^[A-Za-z]+(?: [A-Za-z]+)+$/, {
+          message: "Full name must contain only English letters and single spaces",
+        })
+        .optional(),
       email: emailSchema.optional(),
       password: passwordSchema.optional(),
+      domain: nonEmptyTrimmedString("Domain")
+        .max(30, { message: "Domain must be at most 30 characters" })
+        .regex(/^[A-Za-z]+(?: [A-Za-z]+)*$/, {
+          message: "Domain must contain only English letters and single spaces",
+        })
+        .optional(),
+      skills: nonEmptyTrimmedString("Skills")
+        .max(50, { message: "Skills must be at most 50 characters" })
+        .regex(/^[A-Za-z]+(?: [A-Za-z]+)*$/, {
+          message: "Skills must contain only English letters and single spaces",
+        })
+        .optional(),
+      cnicNumber: z
+        .string()
+        .trim()
+        .regex(/^\d{5}-\d{7}-\d{1}$/, {
+          message: "CNIC number must be in 12345-1234567-1 format",
+        })
+        .optional(),
+      status: z.enum(["Available", "Busy"]).optional(),
+      description: nonEmptyTrimmedString("Description").max(500, {
+        message: "Description must be at most 500 characters",
+      }).optional(),
+      youtubeUrl: z.string().trim().url({ message: "YouTube URL must be valid" }).optional().or(z.literal("")),
+      dob: z.union([z.string().trim().min(1), z.date()]).optional(),
+      picture: z.string().trim().optional(),
+      cnicImage: z.string().trim().optional(),
+      experience: z.string().trim().optional(),
     });
+
     const validation = updateSchema.safeParse(updates);
     if (!validation.success) {
       return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
     }
 
+    if (updates.dob && typeof updates.dob === "string") {
+      const parsedDob = new Date(updates.dob);
+      if (Number.isNaN(parsedDob.getTime())) {
+        return res.status(400).json({ message: "Date of birth is invalid" });
+      }
+      updates.dob = parsedDob;
+    }
+
+    if (updates.firstname) updates.firstname = normalizeName(updates.firstname);
+    if (updates.lastname) updates.lastname = normalizeName(updates.lastname);
+    if (updates.firstname && updates.lastname) {
+      updates.name = `${updates.firstname} ${updates.lastname}`.trim();
+    }
+    updates.profileCompleted = true;
+
     const updated = await Freelancer.findByIdAndUpdate(req.params.id, updates, { new: true });
-    res.status(200).json(updated);
+    res.status(200).json({
+      ...updated.toObject(),
+      name: updated.name || `${updated.firstname} ${updated.lastname}`.trim(),
+      profileCompleted: Boolean(updated.profileCompleted),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

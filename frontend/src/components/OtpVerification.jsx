@@ -60,7 +60,11 @@ const OtpVerification = () => {
       setLoading(true);
       const res = await axios.post(verify, { email, code: otp });
       toast.success(res.data.message || "Email verified successfully");
-      navigate("/login");
+      if (role === "freelancer" && localStorage.getItem("freelancerId")) {
+        navigate("/freelancer-info");
+      } else {
+        navigate("/login");
+      }
     } catch (err) {
       const msg =
         err.response?.data?.message ||

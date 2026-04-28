@@ -96,6 +96,10 @@ const freelancerSchema = new mongoose.Schema({
   // YouTube URL for sample work or references
   youtubeUrl: String,
   experience: String,
+  profileCompleted: {
+    type: Boolean,
+    default: false,
+  },
   status: { type: String, default: "Available" },
   rating: { type: Number, default: 0 },
   earnings: { type: Number, default: 0 },

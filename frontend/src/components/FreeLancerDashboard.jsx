@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import WithdrawModal from "./WithdrawModal";
 import axios from "axios";
 import { toast } from 'react-hot-toast'
+import { sanitizeNameInput, validateName } from "../utils/authValidation";
 import {
   FaUserCircle,
   FaTasks,
@@ -16,6 +17,7 @@ import {
 import { MdFeedback } from "react-icons/md";
 import GigNegotiation from "./GigNegotiation";
 import FreelancerOrders from "./FreelancerOrders";
+import FreelancerInfoForm from "./FreelancerInfoForm";
 
 const FreelancerDashboard = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -53,6 +55,7 @@ const FreelancerDashboard = () => {
       }
     };
   const [updatedProfile, setUpdatedProfile] = useState({});
+  const [profileErrors, setProfileErrors] = useState({});
   const [newGig, setNewGig] = useState({ title: "", description: "", price: "" });
   const [complaintText, setComplaintText] = useState("");
   const [myComplaints, setMyComplaints] = useState([]);
@@ -109,6 +112,53 @@ const FreelancerDashboard = () => {
   }, [highlightedGig]);
 
   const BASE_URL = "http://localhost:3000/api/v1/freelancers";
+
+  const sanitizeAlphaWords = (value, maxLength) =>
+    value.replace(/[^A-Za-z ]/g, "").replace(/\s+/g, " ").replace(/^ /, "").slice(0, maxLength);
+
+  const validateRequiredWords = (label, value, maxLength) => {
+    const trimmed = value.trim();
+    if (!trimmed) return `${label} is required.`;
+    if (trimmed.length > maxLength) return `${label} must not exceed ${maxLength} characters.`;
+    if (!/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(trimmed)) {
+      return `${label} must contain only letters and single spaces.`;
+    }
+    return "";
+  };
+
+  const validateFreelancerDob = (value) => {
+    if (!value?.trim()) return "Date of birth is required.";
+    const parts = value.split("/");
+    if (parts.length !== 3) return "Date of birth must be in dd/mm/yyyy format.";
+    const [day, month, year] = parts.map((part) => Number(part));
+    if (!day || !month || !year) return "Date of birth must be valid.";
+    const parsed = new Date(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+    if (Number.isNaN(parsed.getTime())) return "Date of birth must be valid.";
+    return "";
+  };
+
+  const validateCnic = (value) => {
+    if (!value?.trim()) return "CNIC number is required.";
+    if (!/^\d{5}-\d{7}-\d{1}$/.test(value.trim())) {
+      return "CNIC number must be in 12345-1234567-1 format.";
+    }
+    return "";
+  };
+
+  const validateOptionalUrl = (value) => {
+    if (!value?.trim()) return "";
+    try {
+      new URL(value);
+      return "";
+    } catch {
+      return "YouTube URL must be valid.";
+    }
+  };
+
+  const handleProfileFieldChange = (field, value) => {
+    setUpdatedProfile((prev) => ({ ...prev, [field]: value }));
+    setProfileErrors((prev) => ({ ...prev, [field]: "" }));
+  };
 
   useEffect(() => {
     const id = localStorage.getItem("freelancerId");
@@ -203,6 +253,66 @@ const FreelancerDashboard = () => {
     } catch (err) {
       console.error("❌ Error updating profile:", err);
       alert("❌ Error updating profile: " + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleValidatedProfileUpdate = async () => {
+    try {
+      const id = localStorage.getItem("freelancerId");
+      const normalizedName = sanitizeNameInput(updatedProfile.name || "");
+      const nameParts = normalizedName.split(" ").filter(Boolean);
+      const nextErrors = {
+        name:
+          nameParts.length < 2
+            ? "Full name must include first name and last name."
+            : nameParts.some((part) => validateName("Name", part))
+              ? "Each part of the full name must be 2-15 letters."
+              : "",
+        domain: validateRequiredWords("Domain", updatedProfile.domain || "", 30),
+        skills: validateRequiredWords("Skills", updatedProfile.skills || "", 50),
+        dob: validateFreelancerDob(updatedProfile.dob || ""),
+        cnicNumber: validateCnic(updatedProfile.cnicNumber || ""),
+        description: validateRequiredWords("Description", updatedProfile.description || "", 500),
+        youtubeUrl: validateOptionalUrl(updatedProfile.youtubeUrl || ""),
+      };
+
+      setProfileErrors(nextErrors);
+      const firstError = Object.values(nextErrors).find(Boolean);
+      if (firstError) {
+        toast.error(firstError);
+        return;
+      }
+
+      const profileToSave = {
+        name: normalizedName,
+        firstName: nameParts[0],
+        lastName: nameParts.slice(1).join(" "),
+        firstname: nameParts[0],
+        lastname: nameParts.slice(1).join(" "),
+        domain: (updatedProfile.domain || "").trim(),
+        skills: (updatedProfile.skills || "").trim(),
+        cnicNumber: (updatedProfile.cnicNumber || "").trim(),
+        status: updatedProfile.status || "Available",
+        description: (updatedProfile.description || "").trim(),
+        youtubeUrl: (updatedProfile.youtubeUrl || "").trim(),
+        dob: updatedProfile.dob && updatedProfile.dob.includes("/")
+          ? (() => {
+              const [day, month, year] = updatedProfile.dob.split("/");
+              return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+            })()
+          : updatedProfile.dob,
+      };
+
+      const res = await axios.put(`${BASE_URL}/${id}`, profileToSave);
+      setFreelancer(res.data);
+      setUpdatedProfile(res.data);
+      localStorage.setItem("freelancer", JSON.stringify(res.data));
+      setEditMode(false);
+      toast.success("Profile updated successfully!");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      const message = err.response?.data?.message || (Array.isArray(err.response?.data?.errors) ? err.response.data.errors.join(" ") : err.message);
+      toast.error(message || "Error updating profile");
     }
   };
 
@@ -321,6 +431,12 @@ const FreelancerDashboard = () => {
         {/* ✅ Dashboard Overview */}
         {activeSection === "dashboard" && (
           <div>
+            <p className="text-lg text-gray-600 mb-2">
+              Logged in as{" "}
+              <span className="font-semibold text-gray-900">
+                {freelancer?.name || `${freelancer?.firstname || ""} ${freelancer?.lastname || ""}`.trim() || "Freelancer"}
+              </span>
+            </p>
             <h2 className="text-3xl font-bold text-gray-800 mb-6">
               Dashboard Overview
             </h2>
@@ -495,7 +611,8 @@ const FreelancerDashboard = () => {
                   if (!editMode) {
                     setUpdatedProfile(freelancer);
                   }
-                  setEditMode(!editMode);
+	                  localStorage.setItem("freelancer", JSON.stringify(freelancer));
+	                  window.location.href = "/freelancer-info";
                 }}
                 className={`px-6 py-2 rounded-lg font-semibold transition ${
                   editMode
@@ -503,7 +620,7 @@ const FreelancerDashboard = () => {
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
               >
-                {editMode ? "Cancel" : "✏️ Edit Profile"}
+                {editMode ? "Cancel" : "Update Profile"}
               </button>
             </div>
 
@@ -518,35 +635,32 @@ const FreelancerDashboard = () => {
                       <input
                         type="text"
                         value={updatedProfile.name || ""}
-                        maxLength={20}
                         onChange={(e) => {
-                          let value = e.target.value;
-                          // Only English letters, no numbers, no spaces, max 20 chars
-                          value = value.replace(/[^A-Za-z]/g, "");
-                          setUpdatedProfile({ ...updatedProfile, name: value });
+                          handleProfileFieldChange("name", sanitizeNameInput(e.target.value).slice(0, 31));
                         }}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
+                      {profileErrors.name && <p className="text-red-500 text-xs mt-1">{profileErrors.name}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Domain</label>
                       <input
                         type="text"
                         value={updatedProfile.domain || ""}
-                        maxLength={30}
-                        onChange={(e) => setUpdatedProfile({ ...updatedProfile, domain: e.target.value })}
+                        onChange={(e) => handleProfileFieldChange("domain", sanitizeAlphaWords(e.target.value, 30))}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
+                      {profileErrors.domain && <p className="text-red-500 text-xs mt-1">{profileErrors.domain}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Skills</label>
                       <input
                         type="text"
                         value={updatedProfile.skills || ""}
-                        maxLength={50}
-                        onChange={(e) => setUpdatedProfile({ ...updatedProfile, skills: e.target.value })}
+                        onChange={(e) => handleProfileFieldChange("skills", sanitizeAlphaWords(e.target.value, 50))}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
+                      {profileErrors.skills && <p className="text-red-500 text-xs mt-1">{profileErrors.skills}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Date of Birth (dd/mm/yyyy)</label>
@@ -557,26 +671,27 @@ const FreelancerDashboard = () => {
                             ? updatedProfile.dob 
                             : new Date(updatedProfile.dob).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
                           : ""}
-                        onChange={(e) => setUpdatedProfile({ ...updatedProfile, dob: e.target.value })}
+                        onChange={(e) => handleProfileFieldChange("dob", e.target.value)}
                         placeholder="25/12/1990"
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
+                      {profileErrors.dob && <p className="text-red-500 text-xs mt-1">{profileErrors.dob}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">CNIC Number</label>
                       <input
                         type="text"
                         value={updatedProfile.cnicNumber || ""}
-                        maxLength={15}
-                        onChange={(e) => setUpdatedProfile({ ...updatedProfile, cnicNumber: e.target.value })}
+                        onChange={(e) => handleProfileFieldChange("cnicNumber", e.target.value.replace(/[^\d-]/g, "").slice(0, 15))}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
+                      {profileErrors.cnicNumber && <p className="text-red-500 text-xs mt-1">{profileErrors.cnicNumber}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
                       <select
                         value={updatedProfile.status || "Available"}
-                        onChange={(e) => setUpdatedProfile({ ...updatedProfile, status: e.target.value })}
+                        onChange={(e) => handleProfileFieldChange("status", e.target.value)}
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       >
                         <option value="Available">Available</option>
@@ -589,10 +704,11 @@ const FreelancerDashboard = () => {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Description / About</label>
                     <textarea
                       value={updatedProfile.description || ""}
-                      onChange={(e) => setUpdatedProfile({ ...updatedProfile, description: e.target.value })}
+                      onChange={(e) => handleProfileFieldChange("description", e.target.value.replace(/\s+/g, " ").replace(/^ /, "").slice(0, 500))}
                       rows={4}
                       className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                     />
+                    {profileErrors.description && <p className="text-red-500 text-xs mt-1">{profileErrors.description}</p>}
                   </div>
 
                   <div>
@@ -600,15 +716,16 @@ const FreelancerDashboard = () => {
                     <input
                       type="url"
                       value={updatedProfile.youtubeUrl || ""}
-                      onChange={(e) => setUpdatedProfile({ ...updatedProfile, youtubeUrl: e.target.value })}
+                      onChange={(e) => handleProfileFieldChange("youtubeUrl", e.target.value)}
                       placeholder="https://youtube.com/..."
                       className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                     />
+                    {profileErrors.youtubeUrl && <p className="text-red-500 text-xs mt-1">{profileErrors.youtubeUrl}</p>}
                   </div>
 
                   <div className="flex gap-4 pt-4">
                     <button
-                      onClick={handleProfileUpdate}
+                      onClick={handleValidatedProfileUpdate}
                       className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
                     >
                       ✅ Save Changes

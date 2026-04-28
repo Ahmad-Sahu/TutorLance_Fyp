@@ -105,6 +105,8 @@ function Login() {
 
       if (role === "tutor" && userData && !userData.profileCompleted) {
         navigate("/tutor-profile");
+      } else if (role === "freelancer" && userData && !userData.profileCompleted) {
+        navigate("/freelancer-info");
       } else {
         const routes = {
           student: "/studentdashboard",

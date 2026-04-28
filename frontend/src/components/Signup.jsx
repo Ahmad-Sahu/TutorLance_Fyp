@@ -109,6 +109,10 @@ function Signup() {
       toast.success(response.data.message || "Signup successful");
 
       if (response.data.requiresOtp) {
+        if (role === "freelancer" && response.data.freelancer) {
+          localStorage.setItem("freelancer", JSON.stringify(response.data.freelancer));
+          localStorage.setItem("freelancerId", response.data.freelancer._id);
+        }
         navigate("/verify-otp", { state: { email, role } });
       } else {
         navigate("/login");

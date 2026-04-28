@@ -1,14 +1,39 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { toast } from 'react-hot-toast'
+import { toast } from "react-hot-toast";
+import { sanitizeNameInput, validateName } from "../utils/authValidation";
 
-// Read from environment variables (Vite uses import.meta.env)
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "";
 const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "";
 
-const FreelancerInfoForm = () => {
+const toDobInput = (value) => {
+  if (!value) return "";
+  if (typeof value === "string" && value.includes("/")) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+const FreelancerInfoForm = ({
+  initialData = {},
+  editMode = false,
+  onSave,
+  onCancel,
+}) => {
   const navigate = useNavigate();
+  const storedProfileCompleted = (() => {
+    try {
+      return Boolean(JSON.parse(localStorage.getItem("freelancer") || "{}")?.profileCompleted);
+    } catch {
+      return false;
+    }
+  })();
+  const isExistingProfile = Boolean(editMode || initialData?.profileCompleted || storedProfileCompleted);
 
   const [form, setForm] = useState({
     name: "",
@@ -19,204 +44,251 @@ const FreelancerInfoForm = () => {
     status: "Available",
     description: "",
     youtubeUrl: "",
+    picture: "",
+    cnicImage: "",
   });
-
   const [pictureFile, setPictureFile] = useState(null);
   const [cnicFile, setCnicFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    const sourceData =
+      initialData && Object.keys(initialData).length > 0
+        ? initialData
+        : (() => {
+            try {
+              return JSON.parse(localStorage.getItem("freelancer") || "{}");
+            } catch {
+              return {};
+            }
+          })();
+
+    setForm({
+      name:
+        sourceData.name ||
+        [sourceData.firstname || sourceData.firstName, sourceData.lastname || sourceData.lastName]
+          .filter(Boolean)
+          .join(" "),
+      dob: toDobInput(sourceData.dob),
+      cnicNumber: sourceData.cnicNumber || "",
+      domain: sourceData.domain || "",
+      skills: sourceData.skills || "",
+      status: sourceData.status || "Available",
+      description: sourceData.description || "",
+      youtubeUrl: sourceData.youtubeUrl || "",
+      picture: sourceData.picture || "",
+      cnicImage: sourceData.cnicImage || "",
+    });
+  }, [initialData]);
 
   const uploadToCloudinary = async (file) => {
     if (!file) return null;
-    
-    // If Cloudinary not configured, skip upload and continue without images
-    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
-      console.warn("⚠️ Cloudinary not configured. Images will not be uploaded. Configure VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in .env.local");
-      return null;
+    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) return null;
+
+    const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+    const res = await fetch(url, { method: "POST", body: data });
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error?.message || "Upload failed");
     }
 
+    const json = await res.json();
+    return json.secure_url || json.url || null;
+  };
+
+  const validateWordField = (label, value, maxLength) => {
+    const trimmed = value.trim();
+    if (!trimmed) return `${label} is required.`;
+    if (trimmed.length > maxLength) return `${label} must not exceed ${maxLength} characters.`;
+    if (!/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(trimmed)) {
+      return `${label} must contain only letters and single spaces.`;
+    }
+    return "";
+  };
+
+  const validateDob = (value) => {
+    if (!value.trim()) return "Date of birth is required.";
+    const parts = value.split("/");
+    if (parts.length !== 3) return "Date of birth must be in dd/mm/yyyy format.";
+    const [day, month, year] = parts.map((part) => Number(part));
+    if (!day || !month || !year) return "Date of birth must be valid.";
+    const parsed = new Date(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+    if (Number.isNaN(parsed.getTime())) return "Date of birth must be valid.";
+    return "";
+  };
+
+  const validateCnic = (value) => {
+    if (!value.trim()) return "CNIC number is required.";
+    if (!/^\d{5}-\d{7}-\d{1}$/.test(value.trim())) {
+      return "CNIC number must be in 12345-1234567-1 format.";
+    }
+    return "";
+  };
+
+  const validateYoutubeUrl = (value) => {
+    if (!value.trim()) return "";
     try {
-      const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
-      const data = new FormData();
-      data.append("file", file);
-      data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
-      const res = await fetch(url, { method: "POST", body: data });
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.error("❌ Cloudinary upload error:", errorData);
-        throw new Error(errorData.error?.message || "Upload failed");
-      }
-      
-      const json = await res.json();
-      console.log("✅ Image uploaded to Cloudinary:", json.secure_url);
-      return json.secure_url || json.url || null;
-    } catch (err) {
-      console.error("❌ Cloudinary upload failed:", err.message);
-      alert(`Image upload failed: ${err.message}. Profile will be saved without images.`);
-      return null;
+      new URL(value);
+      return "";
+    } catch {
+      return "YouTube URL must be valid.";
     }
+  };
+
+  const parseDob = (dobStr) => {
+    const [d, m, y] = dobStr.split("/").map((p) => parseInt(p, 10));
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   };
 
   const handleChange = (e) => {
     let { name, value } = e.target;
-    if (name === "name") {
-      value = value.replace(/[^A-Za-z ]/g, "");
-      value = value.replace(/  +/g, " ");
-      value = value.replace(/^ +/, "");
-    }
-    setForm({ ...form, [name]: value });
-  };
+    if (name === "name") value = sanitizeNameInput(value).slice(0, 31);
+    if (name === "domain") value = value.replace(/[^A-Za-z ]/g, "").replace(/\s+/g, " ").replace(/^ /, "").slice(0, 30);
+    if (name === "skills") value = value.replace(/[^A-Za-z ]/g, "").replace(/\s+/g, " ").replace(/^ /, "").slice(0, 50);
+    if (name === "description") value = value.replace(/\s+/g, " ").replace(/^ /, "").slice(0, 500);
+    if (name === "cnicNumber") value = value.replace(/[^\d-]/g, "").slice(0, 15);
 
-  const parseDob = (dobStr) => {
-    // Expect dd/mm/yyyy format
-    if (!dobStr) return null;
-    const parts = dobStr.split("/");
-    if (parts.length !== 3) return null;
-    const [d, m, y] = parts.map((p) => parseInt(p, 10));
-    if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12) return null;
-    // Convert to ISO format (yyyy-mm-dd) for MongoDB
-    const isoDate = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    console.log(`DOB: ${dobStr} → ISO: ${isoDate}`);
-    return isoDate;
-  };
-
-
-  // Helper: allow only spaces between words, no leading/trailing/multiple spaces, max 20 words
-  // Strict text validation: only spaces between words, no leading/trailing/multiple spaces, max 20 words
-  const isValidText = (val) => {
-    if (!val) return false;
-    const trimmed = val.trim();
-    if (!trimmed) return false;
-    if (/  +/.test(trimmed)) return false;
-    if (!/^[A-Za-z0-9]+( [A-Za-z0-9]+)*$/.test(trimmed)) return false;
-    if (trimmed.split(' ').length > 20) return false;
-    return true;
-  };
-  // Payment validation helper (for later reuse)
-  const isValidPayment = (val) => {
-    const num = Number(val);
-    return !isNaN(num) && num >= 300 && num <= 3000;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validate all text fields
-    if (!isValidText(form.name)) {
-      alert("Name must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
-      setSubmitting(false);
-      return;
-    }
-    if (!isValidText(form.domain)) {
-      alert("Domain must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
-      setSubmitting(false);
-      return;
-    }
-    if (form.skills && !isValidText(form.skills)) {
-      alert("Skills must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
-      setSubmitting(false);
-      return;
-    }
-    if (!isValidText(form.cnicNumber)) {
-      alert("CNIC Number must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
-      setSubmitting(false);
-      return;
-    }
-    if (form.description && !isValidText(form.description)) {
-      alert("Description must be 1-20 words, only letters/numbers, no leading/trailing/multiple spaces.");
-      setSubmitting(false);
-      return;
-    }
-    setSubmitting(true);
+    const nameParts = form.name.trim().split(" ").filter(Boolean);
+    const nextErrors = {
+      name:
+        nameParts.length < 2
+          ? "Full name must include first name and last name."
+          : nameParts.some((part) => validateName("Name", part))
+            ? "Each part of the full name must be 2-15 letters."
+            : "",
+      dob: validateDob(form.dob),
+      cnicNumber: validateCnic(form.cnicNumber),
+      domain: validateWordField("Domain", form.domain, 30),
+      skills: validateWordField("Skills", form.skills, 50),
+      description: validateWordField("Description", form.description, 500),
+      youtubeUrl: validateYoutubeUrl(form.youtubeUrl),
+    };
+    setErrors(nextErrors);
 
+    const firstError = Object.values(nextErrors).find(Boolean);
+    if (firstError) {
+      toast.error(firstError);
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const freelancerId = localStorage.getItem("freelancerId");
       if (!freelancerId) {
-        alert("Freelancer ID missing. Please login or re-register.");
-        setSubmitting(false);
+        toast.error("Freelancer ID missing. Please login again.");
         return;
       }
 
-      // Upload images only if Cloudinary is configured
-      let pictureUrl = null;
-      let cnicImageUrl = null;
-      
+      let pictureUrl = form.picture || "";
+      let cnicImageUrl = form.cnicImage || "";
       if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_UPLOAD_PRESET) {
-        pictureUrl = pictureFile ? await uploadToCloudinary(pictureFile) : null;
-        cnicImageUrl = cnicFile ? await uploadToCloudinary(cnicFile) : null;
-      } else {
-        console.log("⚠️ Skipping image uploads: Cloudinary not configured");
+        if (pictureFile) pictureUrl = await uploadToCloudinary(pictureFile);
+        if (cnicFile) cnicImageUrl = await uploadToCloudinary(cnicFile);
       }
 
-      const parsedDob = parseDob(form.dob);
       const payload = {
-        name: form.name,
-        dob: parsedDob,
+        name: form.name.trim(),
+        firstName: nameParts[0],
+        lastName: nameParts.slice(1).join(" "),
+        dob: parseDob(form.dob),
         picture: pictureUrl,
-        cnicNumber: form.cnicNumber,
+        cnicNumber: form.cnicNumber.trim(),
         cnicImage: cnicImageUrl,
-        domain: form.domain,
-        skills: form.skills,
+        domain: form.domain.trim(),
+        skills: form.skills.trim(),
         status: form.status,
-        description: form.description,
-        youtubeUrl: form.youtubeUrl,
+        description: form.description.trim(),
+        youtubeUrl: form.youtubeUrl.trim(),
+        profileCompleted: true,
       };
 
-      const response = await axios.put(`http://localhost:3000/api/v1/freelancers/${freelancerId}`, payload);
-
-      // Store the updated freelancer data in localStorage
-      if (response.data) {
-        localStorage.setItem("freelancer", JSON.stringify(response.data));
+      let savedFreelancer;
+      if (onSave) {
+        savedFreelancer = await onSave(payload);
+      } else {
+        const response = await axios.put(`http://localhost:3000/api/v1/freelancers/${freelancerId}`, payload);
+        savedFreelancer = response.data;
       }
 
-      toast.success("Profile saved.");
+      if (savedFreelancer) {
+        localStorage.setItem("freelancer", JSON.stringify(savedFreelancer));
+      }
+
       localStorage.setItem("freelancerProfileCompleted", "true");
+      toast.success(editMode ? "Profile updated successfully." : "Profile saved.");
+
+      if (!onSave) {
+        navigate("/freelancerdashboard");
+      }
     } catch (err) {
-      console.error("Error saving freelancer profile:", err);
-      alert("Failed to save profile. Check console for details.");
+      const message =
+        err.response?.data?.message ||
+        (Array.isArray(err.response?.data?.errors)
+          ? err.response.data.errors.join(" ")
+          : "Failed to save profile. Check console for details.");
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto bg-white rounded shadow mt-8">
-      <h2 className="text-2xl font-bold mb-4">Complete Your Freelancer Profile</h2>
+    <div className={editMode ? "" : "p-6 max-w-2xl mx-auto bg-white rounded shadow mt-8"}>
+      <h2 className="text-2xl font-bold mb-4">
+        {isExistingProfile ? "Update Freelancer Profile" : "Complete Your Freelancer Profile"}
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block font-semibold">Full Name</label>
           <input name="name" value={form.name} onChange={handleChange} className="w-full border rounded p-2" required />
+          {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
         </div>
 
         <div>
           <label className="block font-semibold">Date of Birth (dd/mm/yyyy)</label>
           <input name="dob" value={form.dob} onChange={handleChange} className="w-full border rounded p-2" placeholder="DD/MM/YYYY" required />
+          {errors.dob && <p className="text-red-500 text-xs mt-1">{errors.dob}</p>}
         </div>
 
         <div>
           <label className="block font-semibold">Profile Picture</label>
-          <input type="file" accept="image/*" onChange={(e) => setPictureFile(e.target.files[0])} />
+          <input type="file" accept="image/*" onChange={(e) => setPictureFile(e.target.files?.[0] || null)} />
+          {form.picture && !pictureFile && <img src={form.picture} alt="Profile" className="mt-2 h-20 w-20 object-cover rounded-lg border" />}
         </div>
 
         <div>
           <label className="block font-semibold">CNIC Number</label>
           <input name="cnicNumber" value={form.cnicNumber} onChange={handleChange} className="w-full border rounded p-2" required />
+          {errors.cnicNumber && <p className="text-red-500 text-xs mt-1">{errors.cnicNumber}</p>}
         </div>
 
         <div>
           <label className="block font-semibold">CNIC Image</label>
-          <input type="file" accept="image/*" onChange={(e) => setCnicFile(e.target.files[0])} />
+          <input type="file" accept="image/*" onChange={(e) => setCnicFile(e.target.files?.[0] || null)} />
+          {form.cnicImage && !cnicFile && <img src={form.cnicImage} alt="CNIC" className="mt-2 h-20 w-28 object-cover rounded-lg border" />}
         </div>
-
 
         <div>
           <label className="block font-semibold">Domain</label>
           <input name="domain" value={form.domain} onChange={handleChange} className="w-full border rounded p-2" required />
+          {errors.domain && <p className="text-red-500 text-xs mt-1">{errors.domain}</p>}
         </div>
 
         <div>
           <label className="block font-semibold">Skills</label>
           <input name="skills" value={form.skills} onChange={handleChange} className="w-full border rounded p-2" required />
+          {errors.skills && <p className="text-red-500 text-xs mt-1">{errors.skills}</p>}
         </div>
 
         <div>
@@ -229,17 +301,26 @@ const FreelancerInfoForm = () => {
 
         <div>
           <label className="block font-semibold">Short Description</label>
-          <textarea name="description" value={form.description} onChange={handleChange} className="w-full border rounded p-2" rows={4} />
+          <textarea name="description" value={form.description} onChange={handleChange} className="w-full border rounded p-2" rows={4} required />
+          {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
         </div>
 
         <div>
           <label className="block font-semibold">YouTube URL (optional)</label>
           <input name="youtubeUrl" value={form.youtubeUrl} onChange={handleChange} className="w-full border rounded p-2" placeholder="https://youtube.com/..." />
+          {errors.youtubeUrl && <p className="text-red-500 text-xs mt-1">{errors.youtubeUrl}</p>}
         </div>
 
-        <button type="submit" disabled={submitting} className="bg-blue-600 text-white px-4 py-2 rounded">
-          {submitting ? "Saving..." : "Save Profile"}
-        </button>
+        <div className="flex gap-3">
+          <button type="submit" disabled={submitting} className="bg-blue-600 text-white px-4 py-2 rounded">
+            {submitting ? "Saving..." : isExistingProfile ? "Save Changes" : "Save Profile"}
+          </button>
+          {editMode && onCancel && (
+            <button type="button" onClick={onCancel} className="bg-gray-400 text-white px-4 py-2 rounded">
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );
