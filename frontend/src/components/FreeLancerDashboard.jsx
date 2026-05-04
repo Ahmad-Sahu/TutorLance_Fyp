@@ -116,12 +116,25 @@ const FreelancerDashboard = () => {
   const sanitizeAlphaWords = (value, maxLength) =>
     value.replace(/[^A-Za-z ]/g, "").replace(/\s+/g, " ").replace(/^ /, "").slice(0, maxLength);
 
+  const sanitizeSkillsInput = (value) =>
+    value.replace(/[^A-Za-z ,]/g, "").replace(/ {2,}/g, " ").replace(/^[ ,]+/, "").slice(0, 100);
+
   const validateRequiredWords = (label, value, maxLength) => {
     const trimmed = value.trim();
     if (!trimmed) return `${label} is required.`;
     if (trimmed.length > maxLength) return `${label} must not exceed ${maxLength} characters.`;
     if (!/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(trimmed)) {
       return `${label} must contain only letters and single spaces.`;
+    }
+    return "";
+  };
+
+  const validateSkills = (value) => {
+    const trimmed = (value || "").trim();
+    if (!trimmed) return "Skills is required.";
+    if (trimmed.length > 100) return "Skills must not exceed 100 characters.";
+    if (!/^[A-Za-z]+(?: [A-Za-z]+)*(?:\s*,\s*[A-Za-z]+(?: [A-Za-z]+)*)*$/.test(trimmed)) {
+      return "Skills must contain only letters and commas (e.g. React, Node, Python).";
     }
     return "";
   };
@@ -269,7 +282,7 @@ const FreelancerDashboard = () => {
               ? "Each part of the full name must be 2-15 letters."
               : "",
         domain: validateRequiredWords("Domain", updatedProfile.domain || "", 30),
-        skills: validateRequiredWords("Skills", updatedProfile.skills || "", 50),
+        skills: validateSkills(updatedProfile.skills || ""),
         dob: validateFreelancerDob(updatedProfile.dob || ""),
         cnicNumber: validateCnic(updatedProfile.cnicNumber || ""),
         description: validateRequiredWords("Description", updatedProfile.description || "", 500),
@@ -608,11 +621,9 @@ const FreelancerDashboard = () => {
               <h2 className="text-3xl font-bold text-gray-800">My Profile</h2>
               <button
                 onClick={() => {
-                  if (!editMode) {
-                    setUpdatedProfile(freelancer);
-                  }
-	                  localStorage.setItem("freelancer", JSON.stringify(freelancer));
-	                  window.location.href = "/freelancer-info";
+                  localStorage.setItem("freelancer", JSON.stringify(freelancer));
+                  localStorage.removeItem("freelancerFormDraft");
+                  window.location.href = "/freelancer-info";
                 }}
                 className={`px-6 py-2 rounded-lg font-semibold transition ${
                   editMode
@@ -657,9 +668,11 @@ const FreelancerDashboard = () => {
                       <input
                         type="text"
                         value={updatedProfile.skills || ""}
-                        onChange={(e) => handleProfileFieldChange("skills", sanitizeAlphaWords(e.target.value, 50))}
+                        onChange={(e) => handleProfileFieldChange("skills", sanitizeSkillsInput(e.target.value))}
+                        placeholder="e.g. React, Node.js, Python"
                         className="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-blue-500 focus:outline-none"
                       />
+                      <p className="text-gray-400 text-xs mt-1">Separate multiple skills with commas</p>
                       {profileErrors.skills && <p className="text-red-500 text-xs mt-1">{profileErrors.skills}</p>}
                     </div>
                     <div>

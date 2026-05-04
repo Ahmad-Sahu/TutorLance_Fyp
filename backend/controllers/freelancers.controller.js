@@ -343,9 +343,9 @@ export const updateFreelancerProfile = async (req, res) => {
         })
         .optional(),
       skills: nonEmptyTrimmedString("Skills")
-        .max(50, { message: "Skills must be at most 50 characters" })
-        .regex(/^[A-Za-z]+(?: [A-Za-z]+)*$/, {
-          message: "Skills must contain only English letters and single spaces",
+        .max(100, { message: "Skills must be at most 100 characters" })
+        .regex(/^[A-Za-z]+(?: [A-Za-z]+)*(?:\s*,\s*[A-Za-z]+(?: [A-Za-z]+)*)*$/, {
+          message: "Skills must contain only letters and commas (e.g. React, Node, Python)",
         })
         .optional(),
       cnicNumber: z

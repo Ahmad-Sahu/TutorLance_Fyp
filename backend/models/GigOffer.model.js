@@ -7,6 +7,7 @@ const gigOfferSchema = new mongoose.Schema({
   // Freelancer sending the offer
   freelancerId: { type: mongoose.Schema.Types.ObjectId, ref: "Freelancer", required: true },
   freelancerName: String,
+  freelancerPicture: String,
   
   // Student receiving the offer
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student", required: true },

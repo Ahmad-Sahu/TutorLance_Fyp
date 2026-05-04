@@ -55,6 +55,7 @@ export const createCounterOffer = async (req, res) => {
       gigId,
       freelancerId,
       freelancerName: freelancer.name || `${freelancer.firstname} ${freelancer.lastname}`,
+      freelancerPicture: freelancer.picture || "",
       studentId: gig.studentId,
       studentName: gig.studentName,
       originalBudget: gig.budget,

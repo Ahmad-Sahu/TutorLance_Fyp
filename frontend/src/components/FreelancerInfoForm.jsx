@@ -58,7 +58,11 @@ const FreelancerInfoForm = ({
         ? initialData
         : (() => {
             try {
-              return JSON.parse(localStorage.getItem("freelancerFormDraft") || "{}") || JSON.parse(localStorage.getItem("freelancer") || "{}");
+              const profile = JSON.parse(localStorage.getItem("freelancer") || "null");
+              const draft = JSON.parse(localStorage.getItem("freelancerFormDraft") || "null");
+              if (profile?.profileCompleted) return profile;
+              if (draft && Object.keys(draft).length > 0) return draft;
+              return profile || {};
             } catch {
               return {};
             }
@@ -115,6 +119,16 @@ const FreelancerInfoForm = ({
     return "";
   };
 
+  const validateSkills = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Skills is required.";
+    if (trimmed.length > 100) return "Skills must not exceed 100 characters.";
+    if (!/^[A-Za-z]+(?: [A-Za-z]+)*(?:\s*,\s*[A-Za-z]+(?: [A-Za-z]+)*)*$/.test(trimmed)) {
+      return "Skills must contain only letters and commas (e.g. React, Node, Python).";
+    }
+    return "";
+  };
+
   const validateDob = (value) => {
     if (!value.trim()) return "Date of birth is required.";
     const parts = value.split("/");
@@ -153,7 +167,7 @@ const FreelancerInfoForm = ({
     let { name, value } = e.target;
     if (name === "name") value = sanitizeNameInput(value).slice(0, 31);
     if (name === "domain") value = value.replace(/[^A-Za-z ]/g, "").replace(/\s+/g, " ").replace(/^ /, "").slice(0, 30);
-    if (name === "skills") value = value.replace(/[^A-Za-z ]/g, "").replace(/\s+/g, " ").replace(/^ /, "").slice(0, 50);
+    if (name === "skills") value = value.replace(/[^A-Za-z ,]/g, "").replace(/ {2,}/g, " ").replace(/^[ ,]+/, "").slice(0, 100);
     if (name === "description") value = value.replace(/\s+/g, " ").replace(/^ /, "").slice(0, 500);
     if (name === "cnicNumber") value = value.replace(/[^\d-]/g, "").slice(0, 15);
 
@@ -174,7 +188,7 @@ const FreelancerInfoForm = ({
       dob: validateDob(form.dob),
       cnicNumber: validateCnic(form.cnicNumber),
       domain: validateWordField("Domain", form.domain, 30),
-      skills: validateWordField("Skills", form.skills, 50),
+      skills: validateSkills(form.skills),
       description: validateWordField("Description", form.description, 500),
       youtubeUrl: validateYoutubeUrl(form.youtubeUrl),
     };
@@ -311,7 +325,8 @@ const FreelancerInfoForm = ({
 
         <div>
           <label className="block font-semibold">Skills</label>
-          <input name="skills" value={form.skills} onChange={handleChange} className="w-full border rounded p-2" required />
+          <input name="skills" value={form.skills} onChange={handleChange} className="w-full border rounded p-2" placeholder="e.g. React, Node.js, Python" required />
+          <p className="text-gray-400 text-xs mt-1">Separate multiple skills with commas</p>
           {errors.skills && <p className="text-red-500 text-xs mt-1">{errors.skills}</p>}
         </div>
 

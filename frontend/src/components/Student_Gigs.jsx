@@ -477,21 +477,42 @@ const handleSubmit = async (e) => {
 
                         {/* Freelancer Profile Modal */}
                         {showProfileModal && selectedFreelancer && (
-                            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                                <div className="bg-white rounded-lg max-w-xl w-full p-6 relative">
-                                    <button onClick={closeProfileModal} className="absolute top-3 right-3 text-gray-500">Close ✖</button>
-                                    <div className="text-center">
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+                                    {/* Header gradient */}
+                                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-24 relative">
+                                        <button onClick={closeProfileModal} className="absolute top-3 right-3 text-white bg-white bg-opacity-20 rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-30">✕</button>
+                                    </div>
+                                    {/* Profile picture frame */}
+                                    <div className="flex justify-center -mt-12 mb-3">
                                         {selectedFreelancer.picture ? (
-                                            <img src={selectedFreelancer.picture} alt={selectedFreelancer.name} className="w-32 h-32 rounded-full object-cover mx-auto mb-3" />
+                                            <img src={selectedFreelancer.picture} alt={selectedFreelancer.name} className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg" />
                                         ) : (
-                                            <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto mb-3 flex items-center justify-center text-2xl">👤</div>
+                                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-200 to-purple-200 border-4 border-white shadow-lg flex items-center justify-center text-3xl">👤</div>
                                         )}
-                                        <h3 className="text-xl font-bold">{selectedFreelancer.name}</h3>
-                                        <p className="text-sm text-gray-600">{selectedFreelancer.domain}</p>
-                                        <p className="mt-3 text-gray-700">{selectedFreelancer.description}</p>
-                                        <div className="mt-4 flex justify-center gap-4">
-                                            <div className="text-sm">Rating: <strong>{selectedFreelancer.rating ? selectedFreelancer.rating.toFixed(1) : 'N/A'} ⭐</strong></div>
-                                            <div className="text-sm">Orders: <strong>{(selectedFreelancer.orders && selectedFreelancer.orders.length) || 0}</strong></div>
+                                    </div>
+                                    <div className="px-6 pb-6 text-center">
+                                        <h3 className="text-xl font-bold text-gray-900">{selectedFreelancer.name}</h3>
+                                        <span className="inline-block mt-1 bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full">{selectedFreelancer.domain || 'General'}</span>
+                                        {selectedFreelancer.skills && (
+                                            <p className="mt-2 text-sm text-gray-500">Skills: {selectedFreelancer.skills}</p>
+                                        )}
+                                        {selectedFreelancer.description && (
+                                            <p className="mt-3 text-sm text-gray-600 leading-relaxed">{selectedFreelancer.description}</p>
+                                        )}
+                                        <div className="mt-4 flex justify-center gap-6">
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-yellow-500">{selectedFreelancer.rating ? selectedFreelancer.rating.toFixed(1) : 'N/A'} ⭐</div>
+                                                <div className="text-xs text-gray-500">Rating</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-blue-600">{(selectedFreelancer.orders && selectedFreelancer.orders.length) || 0}</div>
+                                                <div className="text-xs text-gray-500">Orders</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-green-600">{(selectedFreelancer.feedbacks && selectedFreelancer.feedbacks.length) || 0}</div>
+                                                <div className="text-xs text-gray-500">Reviews</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -614,9 +635,17 @@ const handleSubmit = async (e) => {
                                     return (
                                     <div key={offer._id} className="bg-white rounded-lg shadow p-4">
                                         <div className="flex justify-between items-start">
+                                            <div className="flex gap-4 flex-1">
+                                                <div className="flex-shrink-0">
+                                                    {offer.freelancerPicture ? (
+                                                        <img src={offer.freelancerPicture} alt={offer.freelancerName} className="w-14 h-14 rounded-full object-cover border-2 border-blue-200" />
+                                                    ) : (
+                                                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-200 to-purple-200 flex items-center justify-center text-2xl border-2 border-blue-200">👤</div>
+                                                    )}
+                                                </div>
                                             <div>
                                                 <div className="font-semibold text-lg">{offer.gigTitle || offer.gig?.title || "Gig"}</div>
-                                                <div className="text-gray-600">Offered by: {offer.freelancerName || offer.freelancer?.name || "Freelancer"}</div>
+                                                <div className="text-gray-600">Offered by: <span className="font-medium text-blue-700">{offer.freelancerName || offer.freelancer?.name || "Freelancer"}</span></div>
                                                 <div className="text-blue-600 font-bold">PKR {offer.offeredAmount}</div>
                                             <div className="text-gray-500 text-sm">Status: {offer.status}{offer.freelancerAcceptedAt ? ' (Freelancer accepted)' : ''}{offer.paymentStatus === 'held' ? ' (Paid/Held)' : ''}</div>
                                                 {offer.negotiationHistory && offer.negotiationHistory.length > 0 && (
@@ -633,6 +662,7 @@ const handleSubmit = async (e) => {
                                                     </div>
                                                 )}
                                             </div>
+                                            </div>{/* end flex gap-4 */}
 
                                             <div className="flex flex-col gap-2 ml-4" style={{minWidth: 220}}>
                                                 <div className="flex gap-2">
