@@ -510,16 +510,17 @@ const FreelancerDashboard = () => {
                 {studentGigs.map((gig) => (
                   <Card key={gig._id}>
                     <div id={`gig-${gig._id}`} className={`${highlightedGig === gig._id ? 'ring-4 ring-yellow-300' : ''}`}>
-                      <h3 className="text-xl font-semibold text-gray-800">
-                        {gig.title}
-                      </h3>
-                      <p className="text-gray-600 mt-2">{gig.description}</p>
-                      <p className="mt-2 text-green-600 font-medium">
-                        Budget: Rs. {gig.budget}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Posted by: {gig.studentName}
-                      </p>
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-lg font-semibold text-gray-800 flex-1">{gig.title}</h3>
+                        <span className="ml-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap">PKR {gig.budget}</span>
+                      </div>
+                      {gig.domain && <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full mb-2">{gig.domain}</span>}
+                      <p className="text-gray-600 text-sm mb-2 line-clamp-2">{gig.description}</p>
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p>👤 Posted by: <strong>{gig.studentName || "Student"}</strong></p>
+                        {gig.deadline && <p>⏰ Deadline: <strong className="text-orange-600">{new Date(gig.deadline).toLocaleString()}</strong></p>}
+                        {gig.createdAt && <p>📅 Posted: <strong>{new Date(gig.createdAt).toLocaleDateString()}</strong></p>}
+                      </div>
                       <div className="mt-4 flex gap-3">
                         <button onClick={() => { setHighlightedGig(gig._id); setActiveSection('available-gigs'); }} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                           View
@@ -877,18 +878,30 @@ const FreelancerDashboard = () => {
                     </div>
 
                     {/* Gig Meta Info */}
-                    <div className="bg-white rounded-lg p-4 mb-6 grid grid-cols-3 gap-4">
+                    <div className="bg-white rounded-lg p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <p className="text-sm text-gray-600">Domain</p>
                         <p className="font-bold text-gray-800">{gig.domain}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Budget</p>
+                        <p className="font-bold text-green-700">PKR {gig.budget}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Posted Date</p>
                         <p className="font-bold text-gray-800">{new Date(gig.createdAt).toLocaleDateString()}</p>
                       </div>
                       <div>
+                        <p className="text-sm text-gray-600">Deadline</p>
+                        <p className="font-bold text-orange-600">{gig.deadline ? new Date(gig.deadline).toLocaleString() : "Not set"}</p>
+                      </div>
+                      <div>
                         <p className="text-sm text-gray-600">Status</p>
                         <p className="font-bold text-green-600">Available</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Posted By</p>
+                        <p className="font-bold text-gray-800">{gig.studentName || "Student"}</p>
                       </div>
                     </div>
 

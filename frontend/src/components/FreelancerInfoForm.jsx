@@ -187,6 +187,7 @@ const FreelancerInfoForm = ({
             : "",
       dob: validateDob(form.dob),
       cnicNumber: validateCnic(form.cnicNumber),
+      cnicImage: (!form.cnicImage && !cnicFile) ? "CNIC image is required." : "",
       domain: validateWordField("Domain", form.domain, 30),
       skills: validateSkills(form.skills),
       description: validateWordField("Description", form.description, 500),
@@ -287,15 +288,16 @@ const FreelancerInfoForm = ({
         </div>
 
         <div>
-          <label className="block font-semibold">CNIC Number</label>
-          <input name="cnicNumber" value={form.cnicNumber} onChange={handleChange} className="w-full border rounded p-2" required />
+          <label className="block font-semibold">CNIC Number <span className="text-red-500">*</span></label>
+          <input name="cnicNumber" value={form.cnicNumber} onChange={handleChange} className="w-full border rounded p-2" placeholder="12345-1234567-1" required />
           {errors.cnicNumber && <p className="text-red-500 text-xs mt-1">{errors.cnicNumber}</p>}
         </div>
 
         <div>
-          <label className="block font-semibold">CNIC Image</label>
-          <input type="file" accept="image/*" onChange={(e) => setCnicFile(e.target.files?.[0] || null)} />
+          <label className="block font-semibold">CNIC Image <span className="text-red-500">*</span></label>
+          <input type="file" accept="image/*" onChange={(e) => { setCnicFile(e.target.files?.[0] || null); setErrors((prev) => ({ ...prev, cnicImage: "" })); }} />
           {form.cnicImage && !cnicFile && <img src={form.cnicImage} alt="CNIC" className="mt-2 h-20 w-28 object-cover rounded-lg border" />}
+          {errors.cnicImage && <p className="text-red-500 text-xs mt-1">{errors.cnicImage}</p>}
         </div>
 
         <div>

@@ -11,16 +11,18 @@ const GigNegotiation = ({ gig, freelancer, onOfferSent, offerId = null, existing
   const BASE_URL = "http://localhost:3000/api/v1/gig-offers";
 
   const handleIncrement = () => {
-    setOfferAmount(prev => prev + 50);
+    setOfferAmount(prev => Math.min(5000, prev + 50));
   };
 
   const handleDecrement = () => {
-    if (offerAmount - 50 >= 0) {
-      setOfferAmount(prev => prev - 50);
-    }
+    setOfferAmount(prev => Math.max(500, prev - 50));
   };
 
   const handleSendOffer = async () => {
+    if (offerAmount < 500 || offerAmount > 5000) {
+      setError("Offer amount must be between PKR 500 and PKR 5,000.");
+      return;
+    }
     try {
       setLoading(true);
       setError("");
@@ -59,6 +61,10 @@ const GigNegotiation = ({ gig, freelancer, onOfferSent, offerId = null, existing
 
   if (offerId) {
     const handleSendCounterAsFreelancer = async () => {
+      if (offerAmount < 500 || offerAmount > 5000) {
+        setError("Amount must be between PKR 500 and PKR 5,000.");
+        return;
+      }
       try {
         setLoading(true);
         await axios.put(`${BASE_URL}/${offerId}/update-amount`, { newAmount: offerAmount, updatedBy: isFreelancer ? 'freelancer' : 'student', comment: isFreelancer ? 'Freelancer counter' : 'Counter' });
@@ -77,17 +83,20 @@ const GigNegotiation = ({ gig, freelancer, onOfferSent, offerId = null, existing
         <div className="bg-white rounded-lg p-4 mb-4">
           <p className="text-sm text-gray-600">Current Offer Amount</p>
           <p className="text-3xl font-bold text-blue-600">PKR {offerAmount}</p>
+          <p className="text-xs text-gray-400 mt-1">Range: PKR 500 – PKR 5,000</p>
         </div>
         <div className="grid grid-cols-2 gap-4 mb-6">
           <button
             onClick={handleDecrement}
-            className="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+            disabled={offerAmount <= 500}
+            className="bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
           >
             <FaMinus /> -50 PKR
           </button>
           <button
             onClick={handleIncrement}
-            className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+            disabled={offerAmount >= 5000}
+            className="bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
           >
             <FaPlus /> +50 PKR
           </button>
@@ -126,21 +135,22 @@ const GigNegotiation = ({ gig, freelancer, onOfferSent, offerId = null, existing
       <div className="bg-white rounded-lg p-4 mb-4">
         <p className="text-sm text-gray-600">Counter Offer Amount</p>
         <p className="text-4xl font-bold text-blue-600">PKR {offerAmount}</p>
-        <p className="text-xs text-gray-500 mt-1">Original Budget: PKR {gig.budget}</p>
+        <p className="text-xs text-gray-500 mt-1">Original Budget: PKR {gig.budget} &nbsp;|&nbsp; Range: PKR 500 – PKR 5,000</p>
       </div>
 
       {/* Increment/Decrement Buttons */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <button
           onClick={handleDecrement}
-          disabled={offerAmount <= 0}
-          className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+          disabled={offerAmount <= 500}
+          className="bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
         >
           <FaMinus /> -50 PKR
         </button>
         <button
           onClick={handleIncrement}
-          className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+          disabled={offerAmount >= 5000}
+          className="bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
         >
           <FaPlus /> +50 PKR
         </button>

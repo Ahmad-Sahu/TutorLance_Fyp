@@ -22,6 +22,9 @@ const StudentCreateGig = ({ onCreated, existingGig, onUpdated, onCancel }) => {
     const [notifications, setNotifications] = useState([]);
     const [loadingNav, setLoadingNav] = useState(false);
 
+    // Gig form validation errors
+    const [gigErrors, setGigErrors] = useState({});
+
     // Freelancers profiles display
     const [randomFreelancers, setRandomFreelancers] = useState([]);
     const [freelancersLoading, setFreelancersLoading] = useState(false);
@@ -193,14 +196,79 @@ const onPaymentSuccess = async (data) => {
     toast.success('Payment held and order created');
 }
 
+// ── Gig field handlers ────────────────────────────────────────────────────────
+const countWords = (str) => str.trim() ? str.trim().split(/\s+/).length : 0;
+
+const handleTitleChange = (e) => {
+    const sanitized = e.target.value.replace(/[^A-Za-z ]/g, "").replace(/ +/g, " ").replace(/^ /, "").slice(0, 40);
+    setGig(prev => ({ ...prev, title: sanitized }));
+    setGigErrors(prev => ({ ...prev, title: "" }));
+};
+
+const handleDescriptionChange = (e) => {
+    const sanitized = e.target.value.replace(/[^A-Za-z0-9 ]/g, "").replace(/ +/g, " ").replace(/^ /, "");
+    const words = sanitized.trim() ? sanitized.trim().split(" ") : [];
+    const capped = words.length > 400 ? words.slice(0, 400).join(" ") : sanitized;
+    setGig(prev => ({ ...prev, description: capped }));
+    setGigErrors(prev => ({ ...prev, description: "" }));
+};
+
+const handleBudgetChange = (e) => {
+    const digits = e.target.value.replace(/[^0-9]/g, "");
+    if (digits === "") { setGig(prev => ({ ...prev, budget: "" })); setGigErrors(prev => ({ ...prev, budget: "" })); return; }
+    const num = Math.min(5000, parseInt(digits, 10));
+    setGig(prev => ({ ...prev, budget: String(num) }));
+    setGigErrors(prev => ({ ...prev, budget: "" }));
+};
+
+const handleBudgetIncrement = () => {
+    const cur = parseInt(gig.budget, 10) || 500;
+    setGig(prev => ({ ...prev, budget: String(Math.min(5000, cur + 50)) }));
+    setGigErrors(prev => ({ ...prev, budget: "" }));
+};
+
+const handleBudgetDecrement = () => {
+    const cur = parseInt(gig.budget, 10) || 500;
+    setGig(prev => ({ ...prev, budget: String(Math.max(500, cur - 50)) }));
+    setGigErrors(prev => ({ ...prev, budget: "" }));
+};
+
+const validateGigForm = () => {
+    const errs = {};
+    const title = gig.title.trim();
+    if (!title) errs.title = "Gig title is required.";
+    else if (title.length < 3) errs.title = "Gig title must be at least 3 characters.";
+    else if (!/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(title)) errs.title = "Gig title must contain only English letters.";
+
+    const desc = gig.description.trim();
+    if (!desc) errs.description = "Description is required.";
+    else if (!/^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$/.test(desc)) errs.description = "Description must contain only English letters and numbers.";
+    else if (countWords(desc) > 400) errs.description = "Description must not exceed 400 words.";
+    else if (countWords(desc) < 5) errs.description = "Description must be at least 5 words.";
+
+    if (!gig.domain) errs.domain = "Please select a domain.";
+
+    const budget = parseInt(gig.budget, 10);
+    if (!gig.budget) errs.budget = "Budget is required.";
+    else if (isNaN(budget)) errs.budget = "Budget must be a number.";
+    else if (budget < 500) errs.budget = "Minimum budget is PKR 500.";
+    else if (budget > 5000) errs.budget = "Maximum budget is PKR 5000.";
+
+    if (!gig.deadline) errs.deadline = "Deadline is required.";
+    else if (new Date(gig.deadline) <= new Date()) errs.deadline = "Deadline must be a future date and time.";
+
+    return errs;
+};
+
 // Handle create/update gig form submit
 const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Validation
-    if (!gig.title || !gig.description || !gig.domain || !gig.budget) {
-        alert("Please fill all fields!");
+    const errs = validateGigForm();
+    setGigErrors(errs);
+    if (Object.keys(errs).length > 0) {
+        toast.error(Object.values(errs)[0]);
         setLoading(false);
         return;
     }
@@ -241,15 +309,11 @@ const handleSubmit = async (e) => {
         }
 
         // Reset input fields
-        setGig({
-            title: "",
-            description: "",
-            domain: "",
-            budget: "",
-        });
+        setGig({ title: "", description: "", domain: "", budget: "", deadline: "" });
+        setGigErrors({});
     } catch (error) {
         console.log("❌ Error creating/updating gig:", error);
-        alert("Error creating gig. Check console.");
+        toast.error(error.response?.data?.message || "Error creating gig. Please try again.");
     } finally {
         setLoading(false);
     }
@@ -318,14 +382,26 @@ const handleSubmit = async (e) => {
                         {loadingNav ? <div>Loading...</div> : (
                             <div className="space-y-4">
                                 {myGigs.length === 0 ? <div className="text-gray-500">No gigs posted yet.</div> : myGigs.map(gig => (
-                                    <div key={gig._id} className="bg-white rounded-lg shadow p-4 flex justify-between items-center">
-                                        <div>
-                                            <div className="font-semibold text-lg">{gig.title}</div>
-                                            <div className="text-gray-600">{gig.description}</div>
-                                            <div className="text-blue-600 font-bold">PKR {gig.budget}</div>
-                                            {gig.deadline && <div className="text-sm text-gray-500">Deadline: {new Date(gig.deadline).toLocaleString()}</div>}
-                                        </div>
-                                        <div className="flex gap-2">
+                                    <div key={gig._id} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow p-5 border border-blue-100">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1">
+                                                {/* Title + Budget */}
+                                                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                                    <h3 className="text-lg font-bold text-gray-900">{gig.title}</h3>
+                                                    <span className="bg-green-600 text-white text-sm font-semibold px-3 py-1 rounded-full">PKR {gig.budget}</span>
+                                                    {gig.domain && <span className="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">{gig.domain}</span>}
+                                                    {gig.status && <span className={`text-xs font-semibold px-2 py-1 rounded-full ${gig.status === 'open' || !gig.status ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{gig.status || 'Open'}</span>}
+                                                </div>
+                                                {/* Description */}
+                                                <p className="text-gray-600 text-sm mb-3 leading-relaxed">{gig.description}</p>
+                                                {/* Meta row */}
+                                                <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                                                    {gig.deadline && <span>⏰ Deadline: <strong className="text-gray-700">{new Date(gig.deadline).toLocaleString()}</strong></span>}
+                                                    {gig.createdAt && <span>📅 Posted: <strong className="text-gray-700">{new Date(gig.createdAt).toLocaleDateString()}</strong></span>}
+                                                    {gig.studentName && <span>👤 By: <strong className="text-gray-700">{gig.studentName}</strong></span>}
+                                                </div>
+                                            </div>
+                                        <div className="flex gap-2 flex-shrink-0">
                                             <button onClick={async () => {
                                                 if (!window.confirm('Delete this gig? This will remove the gig for all users and refund payments if any.')) return;
                                                 try {
@@ -343,64 +419,118 @@ const handleSubmit = async (e) => {
                                                 }
                                             }} className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600">Delete</button>
                                         </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         )}
-                        {/* Create New Gig form (now shown above recommended freelancers) */}
-                        <div className="mt-10">
-                            <h3 className="text-xl font-bold mb-2">Create New Gig</h3>
-                            {/* ...existing code... */}
-                            <form onSubmit={handleSubmit}>
-                                <input
-                                    type="text"
-                                    placeholder="Gig Title"
-                                    value={gig.title}
-                                    onChange={(e) => setGig({ ...gig, title: e.target.value })}
-                                    className="w-full border rounded p-2 mb-3"
-                                />
-                                <textarea
-                                    placeholder="Description"
-                                    value={gig.description}
-                                    onChange={(e) => setGig({ ...gig, description: e.target.value })}
-                                    className="w-full border rounded p-2 mb-3"
-                                />
-                                <select
-                                    value={gig.domain}
-                                    onChange={(e) => setGig({ ...gig, domain: e.target.value })}
-                                    className="w-full border rounded p-2 mb-3"
-                                >
-                                    <option value="">Select Domain</option>
-                                    <option value="Flutter">Flutter</option>
-                                    <option value="Web Development">Web Development</option>
-                                    <option value="UI/UX">UI/UX</option>
-                                    <option value="Python">Python</option>
-                                    <option value="Mobile Development">Mobile Development</option>
-                                    <option value="Data Science">Data Science</option>
-                                    <option value="Machine Learning">Machine Learning</option>
-                                    <option value="JavaScript">JavaScript</option>
-                                    <option value="Java">Java</option>
-                                    <option value="C++">C++</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <input
-                                    type="number"
-                                    placeholder="Budget"
-                                    value={gig.budget}
-                                    onChange={(e) => setGig({ ...gig, budget: e.target.value })}
-                                    className="w-full border rounded p-2 mb-3"
-                                />
+                        {/* Create New Gig form */}
+                        <div className="mt-10 bg-white rounded-xl shadow p-6 border border-gray-100">
+                            <h3 className="text-xl font-bold mb-4 text-gray-800">{existingGig ? "Edit Gig" : "Create New Gig"}</h3>
+                            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+
+                                {/* Title */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Gig Title <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Enter title name here, i.e, basic JavaScript basics video"
+                                        value={gig.title}
+                                        onChange={handleTitleChange}
+                                        className={`w-full border rounded-lg p-2 focus:outline-none focus:border-blue-500 ${gigErrors.title ? "border-red-400" : "border-gray-300"}`}
+                                    />
+                                    <div className="flex justify-between mt-1">
+                                        {gigErrors.title ? <p className="text-red-500 text-xs">{gigErrors.title}</p> : <span />}
+                                        <p className="text-xs text-gray-400">{gig.title.length} / 40</p>
+                                    </div>
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
+                                    <textarea
+                                        placeholder="Describe what you need done..."
+                                        value={gig.description}
+                                        onChange={handleDescriptionChange}
+                                        rows={4}
+                                        className={`w-full border rounded-lg p-2 focus:outline-none focus:border-blue-500 ${gigErrors.description ? "border-red-400" : "border-gray-300"}`}
+                                    />
+                                    <div className="flex justify-between mt-1">
+                                        {gigErrors.description ? <p className="text-red-500 text-xs">{gigErrors.description}</p> : <span />}
+                                        <p className={`text-xs ${countWords(gig.description) >= 400 ? "text-red-500 font-semibold" : "text-gray-400"}`}>
+                                            {countWords(gig.description)} / 400 words
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Domain */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Domain <span className="text-red-500">*</span></label>
+                                    <select
+                                        value={gig.domain}
+                                        onChange={(e) => { setGig(prev => ({ ...prev, domain: e.target.value })); setGigErrors(prev => ({ ...prev, domain: "" })); }}
+                                        className={`w-full border rounded-lg p-2 focus:outline-none focus:border-blue-500 ${gigErrors.domain ? "border-red-400" : "border-gray-300"}`}
+                                    >
+                                        <option value="">Select Domain</option>
+                                        <option value="Flutter">Flutter</option>
+                                        <option value="Web Development">Web Development</option>
+                                        <option value="UI/UX">UI/UX</option>
+                                        <option value="Python">Python</option>
+                                        <option value="Mobile Development">Mobile Development</option>
+                                        <option value="Data Science">Data Science</option>
+                                        <option value="Machine Learning">Machine Learning</option>
+                                        <option value="JavaScript">JavaScript</option>
+                                        <option value="Java">Java</option>
+                                        <option value="C++">C++</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    {gigErrors.domain && <p className="text-red-500 text-xs mt-1">{gigErrors.domain}</p>}
+                                </div>
+
+                                {/* Budget */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Budget (PKR) <span className="text-red-500">*</span></label>
+                                    <p className="text-xs text-gray-400 mb-2">Range: PKR 500 – PKR 5,000</p>
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={handleBudgetDecrement}
+                                            className="bg-red-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded-lg transition disabled:opacity-50"
+                                            disabled={parseInt(gig.budget, 10) <= 500 || !gig.budget}>
+                                            −50
+                                        </button>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="e.g. 1500"
+                                            value={gig.budget}
+                                            onChange={handleBudgetChange}
+                                            className={`flex-1 border rounded-lg p-2 text-center font-semibold focus:outline-none focus:border-blue-500 ${gigErrors.budget ? "border-red-400" : "border-gray-300"}`}
+                                        />
+                                        <button type="button" onClick={handleBudgetIncrement}
+                                            className="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-lg transition disabled:opacity-50"
+                                            disabled={parseInt(gig.budget, 10) >= 5000}>
+                                            +50
+                                        </button>
+                                    </div>
+                                    {gigErrors.budget && <p className="text-red-500 text-xs mt-1">{gigErrors.budget}</p>}
+                                </div>
+
+                                {/* Deadline */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Deadline <span className="text-red-500">*</span></label>
                                     <input
                                         type="datetime-local"
-                                        placeholder="Deadline"
                                         value={gig.deadline}
-                                        onChange={(e) => setGig({ ...gig, deadline: e.target.value })}
-                                        className="w-full border rounded p-2 mb-3"
+                                        onChange={(e) => { setGig(prev => ({ ...prev, deadline: e.target.value })); setGigErrors(prev => ({ ...prev, deadline: "" })); }}
+                                        min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                                        className={`w-full border rounded-lg p-2 focus:outline-none focus:border-blue-500 ${gigErrors.deadline ? "border-red-400" : "border-gray-300"}`}
                                     />
+                                    {gigErrors.deadline && <p className="text-red-500 text-xs mt-1">{gigErrors.deadline}</p>}
+                                </div>
+
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="bg-blue-600 text-white px-4 py-2 rounded w-full hover:bg-blue-700 transition"
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg w-full hover:bg-blue-700 transition font-semibold disabled:opacity-60"
                                 >
                                     {loading ? (existingGig ? "Saving..." : "Creating...") : (existingGig ? "Save Changes" : "Create Gig")}
                                 </button>
@@ -408,7 +538,7 @@ const handleSubmit = async (e) => {
                                     <button
                                         type="button"
                                         onClick={() => typeof onCancel === "function" ? onCancel() : null}
-                                        className="mt-2 bg-gray-200 text-gray-800 px-4 py-2 rounded w-full hover:bg-gray-300 transition"
+                                        className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg w-full hover:bg-gray-300 transition"
                                     >
                                         Cancel
                                     </button>
