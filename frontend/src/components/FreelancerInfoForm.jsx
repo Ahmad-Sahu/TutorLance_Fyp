@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -236,7 +237,7 @@ const FreelancerInfoForm = ({
       if (onSave) {
         savedFreelancer = await onSave(payload);
       } else {
-        const response = await axios.put(`http://localhost:3000/api/v1/freelancers/${freelancerId}`, payload);
+        const response = await axios.put(`${API_BASE}/api/v1/freelancers/${freelancerId}`, payload);
         savedFreelancer = response.data;
       }
 

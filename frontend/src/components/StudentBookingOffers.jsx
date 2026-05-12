@@ -1,10 +1,11 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { FaCheck, FaTimes, FaSync, FaHistory } from "react-icons/fa";
 
-const API = "http://localhost:3000/api/v1";
+const API = `${API_BASE}/api/v1`;
 
 const authHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },

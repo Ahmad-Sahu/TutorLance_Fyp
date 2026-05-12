@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from 'react-hot-toast'
@@ -38,7 +39,7 @@ const FreelancerOrders = ({ freelancerId }) => {
     }
   };
 
-  const BASE_URL = "http://localhost:3000/api/v1/gig-offers";
+  const BASE_URL = `${API_BASE}/api/v1/gig-offers`;
 
   const fetchOrders = async () => {
     try {

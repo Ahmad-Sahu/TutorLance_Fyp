@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -5,7 +6,7 @@ import { Users, BookOpen, DollarSign, Briefcase, UserCheck, MessageSquare, Star,
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "react-hot-toast";
 
-const API = "http://localhost:3000/api/v1";
+const API = `${API_BASE}/api/v1`;
 const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
 const COLORS = ["#4F46E5", "#22C55E", "#EAB308", "#EF4444", "#3B82F6", "#8B5CF6"];
 

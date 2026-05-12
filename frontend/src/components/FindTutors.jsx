@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SiStudyverse } from "react-icons/si";
@@ -94,7 +95,7 @@ function FindTutors() {
             if (queryParams.has('subject')) {
                 queryParams.set('subject', queryParams.get('subject'));
             }
-            const response = await axios.get(`http://localhost:3000/api/v1/tutors?${queryParams}`);
+            const response = await axios.get(`${API_BASE}/api/v1/tutors?${queryParams}`);
             // Only show tutors with profileCompleted true (should be enforced by backend, but double check)
             setTutors((response.data.tutors || []).filter(t => t.profileCompleted));
         } catch (error) {

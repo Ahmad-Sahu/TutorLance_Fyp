@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +24,7 @@ const StudentAllOffers = ({ studentId }) => {
   const fetchOffers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:3000/api/v1/gig-offers/student?studentId=${studentId}`);
+      const res = await axios.get(`${API_BASE}/api/v1/gig-offers/student?studentId=${studentId}`);
       const offers = res.data && Array.isArray(res.data) ? res.data : res.data.offers || [];
       setOffers(offers);
       localStorage.setItem('studentGigOffers', JSON.stringify(offers));
@@ -54,7 +55,7 @@ const StudentAllOffers = ({ studentId }) => {
   const handleReject = async (offerId) => {
     if (!window.confirm('Reject this offer?')) return;
     try {
-      await axios.put(`http://localhost:3000/api/v1/gig-offers/${offerId}/reject`, { rejectedBy: 'student' });
+      await axios.put(`${API_BASE}/api/v1/gig-offers/${offerId}/reject`, { rejectedBy: 'student' });
       fetchOffers();
       toast.success('Offer rejected');
     } catch (err) {
@@ -65,7 +66,7 @@ const StudentAllOffers = ({ studentId }) => {
   const handleCounter = async (offerId, amount) => {
     if (!amount || amount <= 0) return toast.error('Enter a valid counter amount');
     try {
-      await axios.put(`http://localhost:3000/api/v1/gig-offers/${offerId}/update-amount`, { newAmount: amount, updatedBy: 'student', comment: 'Student counter' });
+      await axios.put(`${API_BASE}/api/v1/gig-offers/${offerId}/update-amount`, { newAmount: amount, updatedBy: 'student', comment: 'Student counter' });
       fetchOffers();
       setNegotiating((prev) => ({ ...prev, [offerId]: undefined }));
       toast.success('Counter offer sent');

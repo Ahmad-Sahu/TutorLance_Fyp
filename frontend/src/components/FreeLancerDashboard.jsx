@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from "react";
 import WithdrawModal from "./WithdrawModal";
 import axios from "axios";
@@ -39,7 +40,7 @@ const FreelancerDashboard = () => {
         if (pmError) throw new Error(pmError.message);
         const token = localStorage.getItem("token");
         const res = await axios.post(
-          `http://localhost:3000/api/v1/freelancers/withdraw`,
+          `${API_BASE}/api/v1/freelancers/withdraw`,
           { amount, paymentMethodId: paymentMethod.id },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -47,7 +48,7 @@ const FreelancerDashboard = () => {
         // Refresh dashboard data
         const id = localStorage.getItem("freelancerId");
         if (id) {
-          const res = await axios.get(`http://localhost:3000/api/v1/freelancers/${id}/dashboard`);
+          const res = await axios.get(`${API_BASE}/api/v1/freelancers/${id}/dashboard`);
           setDashboardData(res.data);
         }
       } catch (err) {
@@ -66,7 +67,7 @@ const FreelancerDashboard = () => {
 
   useEffect(() => {
     if (activeSection === "complaints" && localStorage.getItem("token")) {
-      axios.get("http://localhost:3000/api/v1/complaints/my", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+      axios.get(`${API_BASE}/api/v1/complaints/my`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
         .then((r) => setMyComplaints(r.data.complaints || []))
         .catch(() => {});
     }
@@ -76,10 +77,10 @@ const FreelancerDashboard = () => {
     if (!complaintText.trim()) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.post("http://localhost:3000/api/v1/complaints", { message: complaintText }, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.post(`${API_BASE}/api/v1/complaints`, { message: complaintText }, { headers: { Authorization: `Bearer ${token}` } });
       toast.success("Complaint sent");
       setComplaintText("");
-      const r = await axios.get("http://localhost:3000/api/v1/complaints/my", { headers: { Authorization: `Bearer ${token}` } });
+      const r = await axios.get(`${API_BASE}/api/v1/complaints/my`, { headers: { Authorization: `Bearer ${token}` } });
       setMyComplaints(r.data.complaints || []);
     } catch (e) {
       toast.error("Failed to send");
@@ -91,7 +92,7 @@ const FreelancerDashboard = () => {
       const id = localStorage.getItem("freelancerId");
       if (!id) return;
       setOffersLoading(true);
-      const res = await axios.get(`http://localhost:3000/api/v1/gig-offers/freelancer/${id}`);
+      const res = await axios.get(`${API_BASE}/api/v1/gig-offers/freelancer/${id}`);
       setFreelancerOffers(res.data || []);
     } catch (err) {
       console.error('❌ Error fetching freelancer offers', err);
@@ -111,7 +112,7 @@ const FreelancerDashboard = () => {
     }, 150);
   }, [highlightedGig]);
 
-  const BASE_URL = "http://localhost:3000/api/v1/freelancers";
+  const BASE_URL = `${API_BASE}/api/v1/freelancers`;
 
   const sanitizeAlphaWords = (value, maxLength) =>
     value.replace(/[^A-Za-z ]/g, "").replace(/\s+/g, " ").replace(/^ /, "").slice(0, maxLength);
@@ -213,7 +214,7 @@ const FreelancerDashboard = () => {
       if (!skill) return;
       try {
         const res = await axios.get(
-          `http://localhost:3000/api/v1/student-gigs/relevant/${id}`
+          `${API_BASE}/api/v1/student-gigs/relevant/${id}`
         );
         // Filter out gigs where deadline has passed
         const now = new Date();
@@ -233,7 +234,7 @@ const FreelancerDashboard = () => {
       try {
         const id = localStorage.getItem("freelancerId");
         if (!id) return;
-        const res = await axios.get(`http://localhost:3000/api/v1/freelancers/${id}`);
+        const res = await axios.get(`${API_BASE}/api/v1/freelancers/${id}`);
         const notifs = (res.data.notifications || []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
         setNotifications(notifs);
       } catch (err) {
@@ -363,7 +364,7 @@ const FreelancerDashboard = () => {
       
       console.log("🚀 Quick Apply - gigId:", gig._id, "budget:", gig.budget, "freelancerId:", freelancerId);
       
-      const res = await axios.post(`http://localhost:3000/api/v1/gig-offers/${freelancerId}/create`, {
+      const res = await axios.post(`${API_BASE}/api/v1/gig-offers/${freelancerId}/create`, {
         gigId: gig._id,
         offeredAmount: gig.budget,
       });
@@ -561,14 +562,14 @@ const FreelancerDashboard = () => {
                       <div className="flex gap-2">
                         <button onClick={async () => {
                           try {
-                            await axios.put(`http://localhost:3000/api/v1/gig-offers/${offer._id}/accept`, { acceptedBy: 'freelancer' });
+                            await axios.put(`${API_BASE}/api/v1/gig-offers/${offer._id}/accept`, { acceptedBy: 'freelancer' });
                             toast.success('Offer accepted');
                             fetchOffersForFreelancer();
                           } catch (err) { alert('❌ ' + (err.response?.data?.message || err.message)); }
                         }} className="px-3 py-2 bg-green-600 text-white rounded">Accept</button>
                         <button onClick={async () => {
                           try {
-                            await axios.put(`http://localhost:3000/api/v1/gig-offers/${offer._id}/reject`, { rejectedBy: 'freelancer' });
+                            await axios.put(`${API_BASE}/api/v1/gig-offers/${offer._id}/reject`, { rejectedBy: 'freelancer' });
                             toast.success('Offer rejected');
                             fetchOffersForFreelancer();
                           } catch (err) { alert('❌ ' + (err.response?.data?.message || err.message)); }
@@ -598,7 +599,7 @@ const FreelancerDashboard = () => {
                           const amount = parseInt(el?.value || '0');
                           if (!amount || amount <= 0) return alert('Enter a valid amount');
                           try {
-                            await axios.put(`http://localhost:3000/api/v1/gig-offers/${offer._id}/update-amount`, { newAmount: amount, updatedBy: 'freelancer', comment: 'Freelancer counter' });
+                            await axios.put(`${API_BASE}/api/v1/gig-offers/${offer._id}/update-amount`, { newAmount: amount, updatedBy: 'freelancer', comment: 'Freelancer counter' });
                             toast.success('✅ Counter offer sent successfully!');
                             fetchOffersForFreelancer();
                           } catch (err) { alert('❌ ' + (err.response?.data?.message || err.message)); }

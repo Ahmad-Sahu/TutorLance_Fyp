@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from 'react-hot-toast'
@@ -8,7 +9,7 @@ const GigNegotiation = ({ gig, freelancer, onOfferSent, offerId = null, existing
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const BASE_URL = "http://localhost:3000/api/v1/gig-offers";
+  const BASE_URL = `${API_BASE}/api/v1/gig-offers`;
 
   const handleIncrement = () => {
     setOfferAmount(prev => Math.min(5000, prev + 50));

@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from 'react-hot-toast'
@@ -8,7 +9,7 @@ const GigDelivery = ({ offer, onDeliverySubmit, isFreelancer = false }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const BASE_URL = "http://localhost:3000/api/v1/gig-offers";
+  const BASE_URL = `${API_BASE}/api/v1/gig-offers`;
 
   const handleSubmitDelivery = async () => {
     try {

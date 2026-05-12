@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -6,7 +7,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_KEY || "pk_test_51234567890");
-const API = "http://localhost:3000/api/v1";
+const API = `${API_BASE}/api/v1`;
 
 const authHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },

@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -8,7 +9,7 @@ import Avatar from "./Avatar";
 import TutorProfileForm from "./TutorProfileForm";
 import WithdrawModal from "./WithdrawModal";
 
-const API = "http://localhost:3000/api/v1";
+const API = `${API_BASE}/api/v1`;
 
 const TutorDashboard = () => {
   const navigate = useNavigate();

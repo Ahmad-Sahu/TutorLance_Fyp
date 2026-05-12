@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { IoMdArrowRoundBack } from "react-icons/io";
@@ -85,13 +86,13 @@ function Signup() {
       let endpoint = "";
 
       if (role === "student") {
-        endpoint = "http://localhost:3000/api/v1/students/signup";
+        endpoint = `${API_BASE}/api/v1/students/signup`;
       } else if (role === "tutor") {
-        endpoint = "http://localhost:3000/api/v1/tutors/signup";
+        endpoint = `${API_BASE}/api/v1/tutors/signup`;
       } else if (role === "freelancer") {
-        endpoint = "http://localhost:3000/api/v1/freelancers/register";
+        endpoint = `${API_BASE}/api/v1/freelancers/register`;
       } else if (role === "admin") {
-        endpoint = "http://localhost:3000/api/v1/admin/signup";
+        endpoint = `${API_BASE}/api/v1/admin/signup`;
       } else {
         toast.error("Please select a valid role!");
         return;

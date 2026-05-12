@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SiStudyverse } from "react-icons/si";
@@ -60,7 +61,7 @@ function TutorProfileView() {
         const token = localStorage.getItem('token');
         const student = localStorage.getItem('student');
         if (!token || !student || !tutorId) return;
-        axios.get('http://localhost:3000/api/v1/students/saved-tutors', { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE}/api/v1/students/saved-tutors`, { headers: { Authorization: `Bearer ${token}` } })
             .then((res) => {
                 const ids = (res.data.savedTutors || []).map((t) => t._id || t);
                 setSaved(ids.includes(tutorId));
@@ -70,7 +71,7 @@ function TutorProfileView() {
 
     const fetchTutorProfile = async () => {
         try {
-            const response = await fetch(`http://localhost:3000/api/v1/tutors/${tutorId}`);
+            const response = await fetch(`${API_BASE}/api/v1/tutors/${tutorId}`);
             const data = await response.json();
             if (response.ok) {
                 setTutor(data.tutor);
@@ -88,7 +89,7 @@ function TutorProfileView() {
 
     const fetchTutorBookings = async () => {
         try {
-            const response = await axios.get(`http://localhost:3000/api/v1/tutors/${tutorId}/bookings-public`);
+            const response = await axios.get(`${API_BASE}/api/v1/tutors/${tutorId}/bookings-public`);
             if (response.data && response.data.bookings) {
                 // Filter to get only confirmed/accepted bookings to check against
                 const activeBookings = response.data.bookings.filter(b => b.status === 'confirmed' || b.status === 'accepted' || b.status === 'pending');
@@ -144,7 +145,7 @@ function TutorProfileView() {
         }
 
         try {
-            const response = await fetch('http://localhost:3000/api/v1/students/booking', {
+            const response = await fetch(`${API_BASE}/api/v1/students/booking`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -275,11 +276,11 @@ function TutorProfileView() {
                                         onClick={async () => {
                                             const token = localStorage.getItem('token');
                                             if (saved) {
-                                                await axios.delete(`http://localhost:3000/api/v1/students/saved-tutors/${tutorId}`, { headers: { Authorization: `Bearer ${token}` } });
+                                                await axios.delete(`${API_BASE}/api/v1/students/saved-tutors/${tutorId}`, { headers: { Authorization: `Bearer ${token}` } });
                                                 setSaved(false);
                                                 toast.success('Removed from saved');
                                             } else {
-                                                await axios.post('http://localhost:3000/api/v1/students/saved-tutors', { tutorId }, { headers: { Authorization: `Bearer ${token}` } });
+                                                await axios.post(`${API_BASE}/api/v1/students/saved-tutors`, { tutorId }, { headers: { Authorization: `Bearer ${token}` } });
                                                 setSaved(true);
                                                 toast.success('Tutor saved');
                                             }

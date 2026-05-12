@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
 import { useNavigate } from "react-router-dom";
@@ -175,7 +176,7 @@ const TutorProfileForm = ({
             } else {
                 // fallback: default behavior (for standalone use)
                 const token = localStorage.getItem("token");
-                const response = await fetch("http://localhost:3000/api/v1/tutors/profile", {
+                const response = await fetch(`${API_BASE}/api/v1/tutors/profile`, {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",

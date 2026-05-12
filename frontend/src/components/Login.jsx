@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { IoMdArrowRoundBack } from "react-icons/io";
@@ -65,13 +66,13 @@ function Login() {
       let endpoint = "";
 
       if (role === "student") {
-        endpoint = "http://localhost:3000/api/v1/students/login";
+        endpoint = `${API_BASE}/api/v1/students/login`;
       } else if (role === "tutor") {
-        endpoint = "http://localhost:3000/api/v1/tutors/login";
+        endpoint = `${API_BASE}/api/v1/tutors/login`;
       } else if (role === "freelancer") {
-        endpoint = "http://localhost:3000/api/v1/freelancers/login";
+        endpoint = `${API_BASE}/api/v1/freelancers/login`;
       } else if (role === "admin") {
-        endpoint = "http://localhost:3000/api/v1/admin/login";
+        endpoint = `${API_BASE}/api/v1/admin/login`;
       } else {
         alert("Please select a valid role!");
         return;
@@ -340,7 +341,7 @@ function Login() {
                           return;
                         }
 
-                        const endpoint = "http://localhost:3000/api/v1/auth/forgot-password";
+                        const endpoint = `${API_BASE}/api/v1/auth/forgot-password`;
                         const payload = {
                           role,
                           email: forgotEmail,

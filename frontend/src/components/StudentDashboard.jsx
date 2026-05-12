@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FindTutors from "./FindTutors";
@@ -85,7 +86,7 @@ const StudentProfileSection = ({ student }) => {
                 profilePictureUrl = await handleCloudinaryUpload(formData.profilePicture);
             }
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:3000/api/v1/students/profile', {
+            const response = await fetch(`${API_BASE}/api/v1/students/profile`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -335,7 +336,7 @@ const StudentDashboard = () => {
         const fetchTutors = async () => {
             try {
                 const query = new URLSearchParams(filters).toString();
-                const response = await fetch(`http://localhost:3000/api/v1/tutors?${query}`);
+                const response = await fetch(`${API_BASE}/api/v1/tutors?${query}`);
                 const data = await response.json();
                 if (response.ok) {
                     setTutors(data.tutors);
@@ -362,7 +363,7 @@ const StudentDashboard = () => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:3000/api/v1/students/notifications?studentId=${student._id}`, {
+            const response = await fetch(`${API_BASE}/api/v1/students/notifications?studentId=${student._id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await response.json();
@@ -386,7 +387,7 @@ const StudentDashboard = () => {
         const token = localStorage.getItem('token');
         if (!token || !student) return;
         try {
-            const res = await axios.get('http://localhost:3000/api/v1/students/saved-tutors', { headers: { Authorization: `Bearer ${token}` } });
+            const res = await axios.get(`${API_BASE}/api/v1/students/saved-tutors`, { headers: { Authorization: `Bearer ${token}` } });
             setSavedTutors(res.data.savedTutors || []);
         } catch (e) {
             setSavedTutors([]);
@@ -400,17 +401,17 @@ const StudentDashboard = () => {
     useEffect(() => {
         if (activeSection === 'complaints' && student) {
             const token = localStorage.getItem('token');
-            if (token) axios.get('http://localhost:3000/api/v1/complaints/my', { headers: { Authorization: `Bearer ${token}` } }).then((r) => setMyComplaints(r.data.complaints || [])).catch(() => {});
+            if (token) axios.get(`${API_BASE}/api/v1/complaints/my`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setMyComplaints(r.data.complaints || [])).catch(() => {});
         }
     }, [activeSection, student]);
 
     const handleSendComplaint = async () => {
         if (!complaintText.trim()) return;
         try {
-            await axios.post('http://localhost:3000/api/v1/complaints', { message: complaintText }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+            await axios.post(`${API_BASE}/api/v1/complaints`, { message: complaintText }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
             toast.success('Complaint sent');
             setComplaintText('');
-            const r = await axios.get('http://localhost:3000/api/v1/complaints/my', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+            const r = await axios.get(`${API_BASE}/api/v1/complaints/my`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
             setMyComplaints(r.data.complaints || []);
         } catch (e) {
             toast.error('Failed to send');
@@ -426,8 +427,8 @@ const StudentDashboard = () => {
             return;
         }
         try {
-            await axios.post('http://localhost:3000/api/v1/payments/process-expired').catch(() => {});
-            const res = await axios.get('http://localhost:3000/api/v1/students/bookings', { headers: { Authorization: `Bearer ${token}` } });
+            await axios.post(`${API_BASE}/api/v1/payments/process-expired`).catch(() => {});
+            const res = await axios.get(`${API_BASE}/api/v1/students/bookings`, { headers: { Authorization: `Bearer ${token}` } });
             setStudentBookings(res.data.bookings || []);
             localStorage.setItem('studentBookings', JSON.stringify(res.data.bookings || []));
         } catch (e) {
@@ -446,7 +447,7 @@ const StudentDashboard = () => {
         const token = localStorage.getItem('token');
         if (!token) return;
         try {
-            await axios.post(`http://localhost:3000/api/v1/students/rate/${bookingId}`, { rating, review }, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.post(`${API_BASE}/api/v1/students/rate/${bookingId}`, { rating, review }, { headers: { Authorization: `Bearer ${token}` } });
             toast.success('Thank you for your review!');
             setRatingModal(null);
             fetchStudentBookings();
@@ -742,10 +743,10 @@ const StudentDashboard = () => {
                                                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
                                                             onClick={async () => {
                                                                 try {
-                                                                    await axios.put(`http://localhost:3000/api/v1/students/booking/${b._id}/accept`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                    await axios.put(`${API_BASE}/api/v1/students/booking/${b._id}/accept`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                                                     toast.success('Booking accepted — complete payment now');
                                                                     // Refresh bookings
-                                                                    const res = await axios.get('http://localhost:3000/api/v1/students/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                    const res = await axios.get(`${API_BASE}/api/v1/students/bookings`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                                                     setStudentBookings(res.data.bookings || []);
                                                                     localStorage.setItem('studentBookings', JSON.stringify(res.data.bookings || []));
                                                                 } catch (err) {
@@ -760,10 +761,10 @@ const StudentDashboard = () => {
                                                             onClick={async () => {
                                                                 if (!window.confirm('Reject this booking?')) return;
                                                                 try {
-                                                                    await axios.put(`http://localhost:3000/api/v1/students/booking/${b._id}/reject`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                    await axios.put(`${API_BASE}/api/v1/students/booking/${b._id}/reject`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                                                     toast.success('Booking rejected');
                                                                     // Refresh bookings
-                                                                    const res = await axios.get('http://localhost:3000/api/v1/students/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                    const res = await axios.get(`${API_BASE}/api/v1/students/bookings`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                                                     setStudentBookings(res.data.bookings || []);
                                                                     localStorage.setItem('studentBookings', JSON.stringify(res.data.bookings || []));
                                                                 } catch (err) {
@@ -784,10 +785,10 @@ const StudentDashboard = () => {
                                                         className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm"
                                                         onClick={async () => {
                                                             try {
-                                                                await axios.put(`http://localhost:3000/api/v1/students/session/${b._id}/done`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                await axios.put(`${API_BASE}/api/v1/students/session/${b._id}/done`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                                                 toast.success('Marked as done! Payment will release if tutor also marks done.');
                                                                 // Refresh bookings
-                                                                const res = await axios.get('http://localhost:3000/api/v1/students/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                                const res = await axios.get(`${API_BASE}/api/v1/students/bookings`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
                                                                 setStudentBookings(res.data.bookings || []);
                                                                 localStorage.setItem('studentBookings', JSON.stringify(res.data.bookings || []));
                                                             } catch (err) {

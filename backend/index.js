@@ -52,45 +52,46 @@ app.use(
   })
 );
 
-// app.use(cors({
-//     origin: process.env.FRONTEND_URL
-// }))
+// Lazy MongoDB connection — reuses the connection across serverless invocations
+let dbConnected = false;
+const connectDB = async () => {
+  if (dbConnected || mongoose.connection.readyState === 1) return;
+  if (process.env.MONGO_URI) {
+    await mongoose.connect(process.env.MONGO_URI);
+    dbConnected = true;
+    console.log("Connected to MongoDB successfully");
+  } else {
+    console.warn("⚠️ MONGO_URI not set. Server will run but database operations will fail.");
+  }
+};
 
-const port = process.env.PORT || 3000
-
-const DB_URI = process.env.MONGO_URI
-
-// Start server after attempting to connect to DB (if configured). If DB fails, we still start server but warn.
-const start = async () => {
-  console.log(`Starting backend. PORT=${port}, MONGO_URI=${!!DB_URI}, STRIPE=${!!process.env.STRIPE_SECRET_KEY}`);
+app.use(async (req, res, next) => {
   try {
-    if (DB_URI) {
-      await mongoose.connect(DB_URI, {
-        //useNewUrlParser: true,
-        // useUnifiedTopology: true
-      });
-      console.log("Connected to MongoDB successfully");
-    } else {
-      console.warn("⚠️ MONGO_URI not set. Server will run but database operations will fail.");
-    }
+    await connectDB();
   } catch (error) {
     console.error("Error connecting to MongoDB:", error);
   }
+  next();
+});
 
-  app.use("/api/v1/students", studentRoutes);
-  app.use("/api/v1/tutors", tutorsRoutes);
-  app.use("/api/v1/freelancers", freelancersRoutes);
-  app.use("/api/v1/admin", adminRoutes);
-  app.use("/api/v1/auth", authRoutes);
-  app.use("/api/v1/student-gigs", student_GigRoutes);
-  app.use("/api/v1/gig-offers", gigOfferRoutes);
-  app.use("/api/v1/payments", paymentRoutes);
-  app.use("/api/bookings", bookingsRoutes);
-  app.use("/api/v1/complaints", complaintRoutes);
+app.use("/api/v1/students", studentRoutes);
+app.use("/api/v1/tutors", tutorsRoutes);
+app.use("/api/v1/freelancers", freelancersRoutes);
+app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/student-gigs", student_GigRoutes);
+app.use("/api/v1/gig-offers", gigOfferRoutes);
+app.use("/api/v1/payments", paymentRoutes);
+app.use("/api/bookings", bookingsRoutes);
+app.use("/api/v1/complaints", complaintRoutes);
 
+// Only bind to a port when running locally (not in Vercel serverless)
+if (process.env.NODE_ENV !== 'production') {
+  const port = process.env.PORT || 3000;
+  console.log(`Starting backend. PORT=${port}, MONGO_URI=${!!process.env.MONGO_URI}, STRIPE=${!!process.env.STRIPE_SECRET_KEY}`);
   app.listen(port, () => {
     console.log(`Server is running on port ${port}`)
   });
-};
+}
 
-start();
+export default app;

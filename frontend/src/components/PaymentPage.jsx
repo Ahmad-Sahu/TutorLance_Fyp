@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -18,7 +19,7 @@ const PaymentPage = () => {
   useEffect(() => {
     const fetchOffer = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/v1/gig-offers/${offerId}`);
+        const res = await axios.get(`${API_BASE}/api/v1/gig-offers/${offerId}`);
         setOffer(res.data);
         setAmount(res.data.offeredAmount);
       } catch (err) {
@@ -48,7 +49,7 @@ const PaymentPage = () => {
       try {
         setLoading(true);
         // 1️⃣ Create PaymentIntent on server
-        const res = await axios.post(`http://localhost:3000/api/v1/gig-offers/${offerId}/payment`, { amount, paymentMethodType: 'card' });
+        const res = await axios.post(`${API_BASE}/api/v1/gig-offers/${offerId}/payment`, { amount, paymentMethodType: 'card' });
 
         // 2️⃣ Confirm payment on frontend with retries to avoid 'element not mounted' races
         const confirmWithRetries = async (clientSecret, maxAttempts = 5) => {
@@ -99,7 +100,7 @@ const PaymentPage = () => {
 
         // 3️⃣ Finalize on server so it persists payment and creates order/notification
         const paymentIntentId = confirmResult.paymentIntent?.id || res.data.paymentIntentId;
-        await axios.post(`http://localhost:3000/api/v1/gig-offers/${offerId}/payment/confirm`, { paymentIntentId });
+        await axios.post(`${API_BASE}/api/v1/gig-offers/${offerId}/payment/confirm`, { paymentIntentId });
 
         toast.success('Payment authorized & held!');
         navigate('/studentdashboard');
@@ -135,7 +136,7 @@ const PaymentPage = () => {
     if (Number(amount) !== Number(offer.offeredAmount)) return alert(`Please pay the exact amount: PKR ${offer.offeredAmount}`);
     try {
       setLoading(true);
-      const res = await axios.post(`http://localhost:3000/api/v1/gig-offers/${offerId}/payment`, { paymentMethodType: method, amount });
+      const res = await axios.post(`${API_BASE}/api/v1/gig-offers/${offerId}/payment`, { paymentMethodType: method, amount });
       toast.success(res.data.message || 'Payment held');
       navigate('/studentdashboard');
     } catch (err) {

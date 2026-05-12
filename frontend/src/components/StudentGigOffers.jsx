@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from 'react-hot-toast'
@@ -9,7 +10,7 @@ const StudentGigOffers = ({ gigId, studentId, onOfferSelect = () => {} }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState(null);
 
-  const BASE_URL = "http://localhost:3000/api/v1/gig-offers";
+  const BASE_URL = `${API_BASE}/api/v1/gig-offers`;
 
   useEffect(() => {
     fetchOffers();

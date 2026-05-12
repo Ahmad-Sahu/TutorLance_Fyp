@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from 'react-hot-toast'
@@ -19,7 +20,7 @@ const StudentGigs = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("my-gigs"); // my-gigs, negotiations, delivery
 
-  const BASE_URL = "http://localhost:3000/api/v1";
+  const BASE_URL = `${API_BASE}/api/v1`;
 
   const [showCreate, setShowCreate] = useState(false);
   const [editGig, setEditGig] = useState(null);

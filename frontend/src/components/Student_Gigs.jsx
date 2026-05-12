@@ -1,3 +1,4 @@
+﻿import { API_BASE } from '../config.js';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from 'react-hot-toast'
@@ -57,11 +58,11 @@ const StudentCreateGig = ({ onCreated, existingGig, onUpdated, onCancel }) => {
         const newAmount = parseInt(raw, 10);
         if (!newAmount || newAmount <= 0) return alert('Enter a valid counter amount');
         try {
-            await axios.put(`http://localhost:3000/api/v1/gig-offers/${offerId}/update-amount`, { newAmount, updatedBy: 'student', comment: 'Student counter' });
+            await axios.put(`${API_BASE}/api/v1/gig-offers/${offerId}/update-amount`, { newAmount, updatedBy: 'student', comment: 'Student counter' });
             toast.success('✅ Counter offer sent to freelancer');
             // refresh offers
             const studentId = JSON.parse(localStorage.getItem("student"))?._id || "";
-            const res = await axios.get("http://localhost:3000/api/v1/gig-offers/student?studentId=" + studentId);
+            const res = await axios.get(`${API_BASE}/api/v1/gig-offers/student?studentId=` + studentId);
             setOffers(res.data && Array.isArray(res.data) ? res.data : res.data.offers || []);
             setNegotiatingOfferId(null);
         } catch (err) {
@@ -83,7 +84,7 @@ const StudentCreateGig = ({ onCreated, existingGig, onUpdated, onCancel }) => {
         const fetchRandomFreelancers = async () => {
             try {
                 setFreelancersLoading(true);
-                const res = await axios.get('http://localhost:3000/api/v1/freelancers/random/list?limit=4');
+                const res = await axios.get(`${API_BASE}/api/v1/freelancers/random/list?limit=4`);
                 setRandomFreelancers(res.data || []);
             } catch (err) {
                 console.error('Error fetching random freelancers:', err);
@@ -118,21 +119,21 @@ const StudentCreateGig = ({ onCreated, existingGig, onUpdated, onCancel }) => {
         if (activePage === "my-gigs") {
             setLoadingNav(true);
             // TODO: Replace with real API call
-            axios.get("http://localhost:3000/api/v1/student-gigs?studentId=" + (JSON.parse(localStorage.getItem("student"))?._id || "")).then(res => {
+            axios.get(`${API_BASE}/api/v1/student-gigs?studentId=` + (JSON.parse(localStorage.getItem("student"))?._id || "")).then(res => {
                 setMyGigs(res.data && Array.isArray(res.data) ? res.data : res.data.gigs || []);
                 setLoadingNav(false);
             }).catch(() => setLoadingNav(false));
         } else if (activePage === "counter-offers") {
             setLoadingNav(true);
             // TODO: Replace with real API call for offers
-                axios.get("http://localhost:3000/api/v1/gig-offers/student?studentId=" + (JSON.parse(localStorage.getItem("student"))?._id || "")).then(res => {
+                axios.get(`${API_BASE}/api/v1/gig-offers/student?studentId=` + (JSON.parse(localStorage.getItem("student"))?._id || "")).then(res => {
                     setOffers(res.data && Array.isArray(res.data) ? res.data : res.data.offers || []);
                     setLoadingNav(false);
                 }).catch(() => setLoadingNav(false));
         } else if (activePage === "orders") {
             setLoadingNav(true);
             const studentId = JSON.parse(localStorage.getItem("student"))?._id || "";
-            axios.get("http://localhost:3000/api/v1/gig-offers/student?studentId=" + studentId).then(res => {
+            axios.get(`${API_BASE}/api/v1/gig-offers/student?studentId=` + studentId).then(res => {
                 const all = res.data && Array.isArray(res.data) ? res.data : res.data.offers || [];
                 // show delivered and completed orders so they remain visible after student accepts
                 setOrders(all.filter(o => o.status === 'delivered' || o.status === 'completed'));
@@ -141,7 +142,7 @@ const StudentCreateGig = ({ onCreated, existingGig, onUpdated, onCancel }) => {
         } else if (activePage === "notifications") {
             setLoadingNav(true);
             const studentId = JSON.parse(localStorage.getItem("student"))?._id || "";
-            axios.get("http://localhost:3000/api/v1/students/notifications?studentId=" + studentId).then(res => {
+            axios.get(`${API_BASE}/api/v1/students/notifications?studentId=` + studentId).then(res => {
                 const notifs = (res.data.notifications || []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
                 setNotifications(notifs);
                 setLoadingNav(false);
@@ -169,10 +170,10 @@ const handleAccept = (offer) => {
 const handleReject = async (offerId) => {
     if (!window.confirm('Reject this offer?')) return;
     try {
-        await axios.put(`http://localhost:3000/api/v1/gig-offers/${offerId}/reject`, { rejectedBy: 'student' });
+        await axios.put(`${API_BASE}/api/v1/gig-offers/${offerId}/reject`, { rejectedBy: 'student' });
         // Refresh offers
         const studentId = JSON.parse(localStorage.getItem("student"))?._id || "";
-        const res = await axios.get("http://localhost:3000/api/v1/gig-offers/student?studentId=" + studentId);
+        const res = await axios.get(`${API_BASE}/api/v1/gig-offers/student?studentId=` + studentId);
         setOffers(res.data && Array.isArray(res.data) ? res.data : res.data.offers || []);
         toast.success('Offer rejected');
     } catch (err) {
@@ -186,7 +187,7 @@ const onPaymentSuccess = async (data) => {
     // Refresh offers
     const studentId = JSON.parse(localStorage.getItem("student"))?._id || "";
     try {
-        const res = await axios.get("http://localhost:3000/api/v1/gig-offers/student?studentId=" + studentId);
+        const res = await axios.get(`${API_BASE}/api/v1/gig-offers/student?studentId=` + studentId);
         setOffers(res.data && Array.isArray(res.data) ? res.data : res.data.offers || []);
     } catch (err) {
         console.error('Error refreshing offers after payment', err);
@@ -289,14 +290,14 @@ const handleSubmit = async (e) => {
 
         if (existingGig && existingGig._id) {
             // Update existing gig
-            res = await axios.put(`http://localhost:3000/api/v1/student-gigs/${existingGig._id}`, {
+            res = await axios.put(`${API_BASE}/api/v1/student-gigs/${existingGig._id}`, {
                 ...gig,
             });
             toast.success("Gig updated successfully!");
             if (typeof onUpdated === "function") onUpdated(res.data.gig || res.data);
         } else {
             res = await axios.post(
-                "http://localhost:3000/api/v1/student-gigs/create",
+                `${API_BASE}/api/v1/student-gigs/create`,
                 {
                     ...gig,
                     studentId,
@@ -406,7 +407,7 @@ const handleSubmit = async (e) => {
                                                 if (!window.confirm('Delete this gig? This will remove the gig for all users and refund payments if any.')) return;
                                                 try {
                                                     const studentId = JSON.parse(localStorage.getItem('student'))?._id || '';
-                                                    await axios.delete(`http://localhost:3000/api/v1/student-gigs/${gig._id}?studentId=${studentId}`);
+                                                    await axios.delete(`${API_BASE}/api/v1/student-gigs/${gig._id}?studentId=${studentId}`);
                                                     setMyGigs(myGigs.filter(g => g._id !== gig._id));
                                                     toast.success('Gig deleted and related offers cleaned up');
                                                     // Refresh offers and orders if currently viewing those sections
@@ -688,11 +689,11 @@ const handleSubmit = async (e) => {
                                         <div className="flex gap-2">
                                             {o.status === 'delivered' && <button onClick={async () => {
                                                 try {
-                                                    const res = await axios.put(`http://localhost:3000/api/v1/gig-offers/${o._id}/accept-delivery`);
+                                                    const res = await axios.put(`${API_BASE}/api/v1/gig-offers/${o._id}/accept-delivery`);
                                                     toast.success('Order accepted and payment released');
                                                     // refresh orders list
                                                     const studentId = JSON.parse(localStorage.getItem("student"))?._id || "";
-                                                    const all = (await axios.get("http://localhost:3000/api/v1/gig-offers/student?studentId=" + studentId)).data;
+                                                    const all = (await axios.get(`${API_BASE}/api/v1/gig-offers/student?studentId=` + studentId)).data;
                                                     const arr = all && Array.isArray(all) ? all : all.offers || [];
                                                     setOrders(arr.filter(x => x.status === 'delivered' || x.status === 'completed'));
                                                 } catch (err) { console.error(err); alert('Error accepting delivery'); }
@@ -717,10 +718,10 @@ const handleSubmit = async (e) => {
                                                             const rating = parseInt(document.getElementById(`rating-${o._id}`).value, 10);
                                                             const comment = document.getElementById(`comment-${o._id}`).value;
                                                             try {
-                                                                await axios.post(`http://localhost:3000/api/v1/gig-offers/${o._id}/feedback`, { rating, comment, studentName: (JSON.parse(localStorage.getItem('student'))?.name) });
+                                                                await axios.post(`${API_BASE}/api/v1/gig-offers/${o._id}/feedback`, { rating, comment, studentName: (JSON.parse(localStorage.getItem('student'))?.name) });
                                                                 toast.success('Feedback submitted');
                                                                 const studentId = JSON.parse(localStorage.getItem("student"))?._id || "";
-                                                                const all = (await axios.get("http://localhost:3000/api/v1/gig-offers/student?studentId=" + studentId)).data;
+                                                                const all = (await axios.get(`${API_BASE}/api/v1/gig-offers/student?studentId=` + studentId)).data;
                                                                 const arr = all && Array.isArray(all) ? all : all.offers || [];
                                                                 setOrders(arr.filter(x => x.status === 'delivered' || x.status === 'completed'));
                                                             } catch (err) {
