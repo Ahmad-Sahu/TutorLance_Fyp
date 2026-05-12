@@ -3,14 +3,13 @@ dotenv.config();
 import { Resend } from 'resend';
 
 if (!process.env.RESEND_API_KEY) {
-  console.error('❌ RESEND_API_KEY is missing from environment. Check .env and dotenv config.');
-  throw new Error('RESEND_API_KEY missing');
+  console.warn('⚠️ RESEND_API_KEY is missing. Email sending will be disabled.');
 }
-console.log('✅ RESEND_API_KEY loaded:', process.env.RESEND_API_KEY);
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export const sendVerificationEmail = async (to, code) => {
+  if (!resend) throw new Error('Email service not configured (RESEND_API_KEY missing)');
   const from = process.env.FROM_EMAIL || 'no-reply@tutorlance.com';
   try {
     await resend.emails.send({
