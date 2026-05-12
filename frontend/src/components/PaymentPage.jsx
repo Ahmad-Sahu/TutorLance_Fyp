@@ -32,7 +32,7 @@ const PaymentPage = () => {
 
   const isValidPayment = (val) => {
     const num = Number(val);
-    return !isNaN(num) && num >= 300 && num <= 3000;
+    return !isNaN(num) && num >= 300 && num <= 2500;
   };
 
   const PaymentCardForm = () => {
@@ -42,7 +42,7 @@ const PaymentPage = () => {
 
     const handleCardPay = async () => {
       if (!offer) return;
-      if (!isValidPayment(amount)) return alert('Amount must be between 300 and 3000');
+      if (!isValidPayment(amount)) return alert('Amount must be between PKR 300 and 2,500');
       if (Number(amount) !== Number(offer.offeredAmount)) return alert(`Please pay the exact amount: PKR ${offer.offeredAmount}`);
       if (!stripe || !elements) return alert('Stripe not ready');
 
@@ -132,7 +132,7 @@ const PaymentPage = () => {
 
   const handlePay = async () => {
     if (!offer) return;
-    if (!isValidPayment(amount)) return alert('Amount must be between 300 and 3000');
+    if (!isValidPayment(amount)) return alert('Amount must be between PKR 300 and 2,500');
     if (Number(amount) !== Number(offer.offeredAmount)) return alert(`Please pay the exact amount: PKR ${offer.offeredAmount}`);
     try {
       setLoading(true);

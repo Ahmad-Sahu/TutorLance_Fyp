@@ -452,6 +452,11 @@ export const negotiateBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found or not yours" });
     }
 
+    const price = Number(proposedPrice);
+    if (isNaN(price) || price < 300 || price > 2500) {
+      return res.status(400).json({ message: "Proposed price must be between PKR 300 and 2,500" });
+    }
+
     booking.negotiationHistory.push({ from: 'tutor', proposedPrice, message });
     booking.proposedPrice = proposedPrice;
     booking.status = 'negotiating';

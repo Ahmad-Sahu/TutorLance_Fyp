@@ -22,7 +22,7 @@ const BookingPaymentForm = ({ booking, onSuccess }) => {
 
   const isValidPayment = (val) => {
     const num = Number(val);
-    return !isNaN(num) && num >= 300 && num <= 3000;
+    return !isNaN(num) && num >= 300 && num <= 2500;
   };
 
   const handlePay = async (e) => {

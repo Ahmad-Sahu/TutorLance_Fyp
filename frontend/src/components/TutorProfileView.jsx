@@ -144,6 +144,32 @@ function TutorProfileView() {
             return;
         }
 
+        if (!bookingData.subject) {
+            toast.error('Please select a subject');
+            return;
+        }
+        if (!bookingData.topicDescription.trim()) {
+            toast.error('Please enter a topic description');
+            return;
+        }
+        const price = Number(bookingData.proposedPrice);
+        if (!bookingData.proposedPrice || isNaN(price) || price < 300 || price > 2500) {
+            toast.error('Proposed price must be between PKR 300 and 2,500');
+            return;
+        }
+        if (!bookingData.proposedDate) {
+            toast.error('Please select a preferred date');
+            return;
+        }
+        if (!bookingData.proposedTime) {
+            toast.error('Please select a preferred time');
+            return;
+        }
+        if (!bookingData.proposedDay) {
+            toast.error('Please select a day of the week');
+            return;
+        }
+
         try {
             const response = await fetch(`${API_BASE}/api/v1/students/booking`, {
                 method: 'POST',
@@ -437,7 +463,7 @@ function TutorProfileView() {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Subject <span className="text-red-500">*</span></label>
                                 <select
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                     value={bookingData.subject}
@@ -451,7 +477,7 @@ function TutorProfileView() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Topic Description</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Topic Description <span className="text-red-500">*</span></label>
                                 <textarea
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                     rows="3"
@@ -462,19 +488,22 @@ function TutorProfileView() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Proposed Price (PKR)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Proposed Price (PKR) <span className="text-red-500">*</span></label>
                                 <input
                                     type="number"
+                                    min={300}
+                                    max={2500}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Your offer"
+                                    placeholder="300 – 2,500"
                                     value={bookingData.proposedPrice}
                                     onChange={(e) => handleInputChange('proposedPrice', e.target.value)}
                                 />
+                                <p className="text-xs text-gray-500 mt-1">Must be between PKR 300 and 2,500</p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Date</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Date <span className="text-red-500">*</span></label>
                                     <input
                                         type="date"
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -483,7 +512,7 @@ function TutorProfileView() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Time</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Time <span className="text-red-500">*</span></label>
                                     <input
                                         type="time"
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -494,7 +523,7 @@ function TutorProfileView() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Day of Week</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Day of Week <span className="text-red-500">*</span></label>
                                 <select
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                     value={bookingData.proposedDay}
