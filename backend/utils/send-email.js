@@ -1,26 +1,37 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const transporter = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    })
+  : null;
+
+if (!transporter) {
+  console.warn('⚠️ GMAIL_USER or GMAIL_APP_PASSWORD not set — OTP emails will be skipped.');
+}
 
 export const sendOtpEmail = async (to, code) => {
-  if (!resend) {
-    console.warn('⚠️ RESEND_API_KEY not set — skipping OTP email.');
+  if (!transporter) {
+    console.warn('⚠️ Email not configured — skipping OTP email to', to);
     return false;
   }
-  const from = process.env.FROM_EMAIL || 'no-reply@tutorlance.com';
   try {
-    const result = await resend.emails.send({
-      from,
+    await transporter.sendMail({
+      from: `"TutorLance" <${process.env.GMAIL_USER}>`,
       to,
       subject: 'TutorLance Email Verification Code',
       text: `Your TutorLance verification code is: ${code}\n\nThis code will expire in 10 minutes.`,
     });
-    console.log('Resend email result:', result);
+    console.log(`OTP email sent to ${to}`);
     return true;
   } catch (error) {
-    console.error('⚠️ Failed to send verification email via Resend:', error);
+    console.error('⚠️ Failed to send OTP email:', error.message);
     return false;
   }
 };

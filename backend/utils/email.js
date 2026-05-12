@@ -1,26 +1,32 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-if (!process.env.RESEND_API_KEY) {
-  console.warn('⚠️ RESEND_API_KEY is missing. Email sending will be disabled.');
+if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+  console.warn('⚠️ GMAIL_USER or GMAIL_APP_PASSWORD is missing. Email sending will be disabled.');
 }
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const transporter = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    })
+  : null;
 
 export const sendVerificationEmail = async (to, code) => {
-  if (!resend) throw new Error('Email service not configured (RESEND_API_KEY missing)');
-  const from = process.env.FROM_EMAIL || 'no-reply@tutorlance.com';
+  if (!transporter) throw new Error('Email service not configured (GMAIL credentials missing)');
   try {
-    await resend.emails.send({
-      from,
+    await transporter.sendMail({
+      from: `"TutorLance" <${process.env.GMAIL_USER}>`,
       to,
       subject: 'TutorLance Email Verification Code',
       text: `Your TutorLance verification code is: ${code}\n\nThis code will expire in 10 minutes.`,
     });
   } catch (error) {
-    console.warn('⚠️ Failed to send verification email via Resend:', error.message);
+    console.warn('⚠️ Failed to send verification email:', error.message);
     throw new Error('Email sending failed');
   }
 };
-
