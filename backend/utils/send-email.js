@@ -2,9 +2,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export const sendOtpEmail = async (to, code) => {
+  if (!resend) {
+    console.warn('⚠️ RESEND_API_KEY not set — skipping OTP email.');
+    return false;
+  }
   const from = process.env.FROM_EMAIL || 'no-reply@tutorlance.com';
   try {
     const result = await resend.emails.send({
