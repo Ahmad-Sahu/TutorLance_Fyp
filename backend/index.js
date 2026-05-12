@@ -2,6 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 import cors from 'cors'
+import dns from 'dns'
 import studentRoutes from './routes/students.route.js'
 import tutorsRoutes from './routes/tutors.route.js'
 import freelancersRoutes from './routes/freelancers.route.js'
@@ -14,6 +15,11 @@ import bookingsRoutes from './routes/bookings.route.js';
 import complaintRoutes from './routes/complaint.route.js';
 
 dotenv.config()
+
+// Fix DNS resolution for MongoDB Atlas SRV records on local machines
+if (process.env.NODE_ENV !== 'production') {
+  dns.setServers(["1.1.1.1", "8.8.8.8"]);
+}
 
 const app = express()
 app.use(express.json())
