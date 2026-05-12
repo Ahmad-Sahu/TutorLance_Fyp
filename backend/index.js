@@ -89,6 +89,7 @@ app.use("/api/v1/complaints", complaintRoutes);
 if (process.env.NODE_ENV !== 'production') {
   const port = process.env.PORT || 3000;
   console.log(`Starting backend. PORT=${port}, MONGO_URI=${!!process.env.MONGO_URI}, STRIPE=${!!process.env.STRIPE_SECRET_KEY}`);
+  connectDB().catch((err) => console.error("Error connecting to MongoDB:", err));
   app.listen(port, () => {
     console.log(`Server is running on port ${port}`)
   });
