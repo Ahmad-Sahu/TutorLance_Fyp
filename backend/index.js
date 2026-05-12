@@ -13,9 +13,6 @@ import paymentRoutes from './routes/payment.route.js';
 import bookingsRoutes from './routes/bookings.route.js';
 import complaintRoutes from './routes/complaint.route.js';
 
-import dns from 'dns';
-dns.setServers(["1.1.1.1", "8.8.8.8"]);
-
 dotenv.config()
 
 const app = express()
@@ -45,8 +42,6 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-// Handle preflight OPTIONS requests on all routes before anything else
-app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // Lazy MongoDB connection — reuses the connection across serverless invocations
