@@ -25,32 +25,29 @@ app.use(express.json())
 if (!process.env.MONGO_URI) console.warn("⚠️ MONGO_URI not set. MongoDB connection may fail.");
 if (!process.env.STRIPE_SECRET_KEY) console.warn("⚠️ STRIPE_SECRET_KEY not set. Stripe payments will be disabled.");
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Development convenience: allow any localhost origin (any port)
-      // and allow the configured FRONTEND_URL. In production, FRONTEND_URL
-      // should be set to the real hostname and this code will still allow it.
-      if (!origin) return callback(null, true); // non-browser requests
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // non-browser / server-to-server requests
 
-      try {
-        const url = new URL(origin);
-        const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-        if (isLocalhost) return callback(null, true);
-      } catch (e) {
-        // If origin isn't a valid URL we'll fall back to explicit match below
-      }
+    try {
+      const url = new URL(origin);
+      const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      if (isLocalhost) return callback(null, true);
+    } catch (e) {}
 
-      // Fallback: allow exact FRONTEND_URL match
-      if (origin === process.env.FRONTEND_URL) return callback(null, true);
+    if (origin === process.env.FRONTEND_URL) return callback(null, true);
 
-      return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+    // Do not throw — return false so the cors package sends a proper rejection
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+// Handle preflight OPTIONS requests on all routes before anything else
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 // Lazy MongoDB connection — reuses the connection across serverless invocations
 let dbConnected = false;
