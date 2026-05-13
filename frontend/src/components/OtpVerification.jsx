@@ -3,8 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { sanitizeEmailInput, validateEmail } from "../utils/authValidation";
-
-const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/v1`;
+import { API_BASE } from "../config.js";
 
 const OtpVerification = () => {
   const location = useLocation();
@@ -19,26 +18,26 @@ const OtpVerification = () => {
   const resolveEndpoints = () => {
     if (role === "student") {
       return {
-        verify: `${API_BASE}/students/verify-otp`,
-        resend: `${API_BASE}/students/resend-otp`,
+        verify: `${API_BASE}/api/v1/students/verify-otp`,
+        resend: `${API_BASE}/api/v1/students/resend-otp`,
       };
     }
     if (role === "tutor") {
       return {
-        verify: `${API_BASE}/tutors/verify-otp`,
-        resend: `${API_BASE}/tutors/resend-otp`,
+        verify: `${API_BASE}/api/v1/tutors/verify-otp`,
+        resend: `${API_BASE}/api/v1/tutors/resend-otp`,
       };
     }
     if (role === "freelancer") {
       return {
-        verify: `${API_BASE}/freelancers/verify-otp`,
-        resend: `${API_BASE}/freelancers/resend-otp`,
+        verify: `${API_BASE}/api/v1/freelancers/verify-otp`,
+        resend: `${API_BASE}/api/v1/freelancers/resend-otp`,
       };
     }
 
     return {
-      verify: `${API_BASE}/students/verify-otp`,
-      resend: `${API_BASE}/students/resend-otp`,
+      verify: `${API_BASE}/api/v1/students/verify-otp`,
+      resend: `${API_BASE}/api/v1/students/resend-otp`,
     };
   };
 
