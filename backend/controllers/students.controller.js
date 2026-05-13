@@ -40,7 +40,7 @@ export const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const code = generateCode();
-    const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     const newStudent = new Student({
       role,
@@ -176,13 +176,13 @@ export const resendStudentOtp = async (req, res) => {
     }
 
     const code = generateCode();
-    const expires = new Date(Date.now() + 5 * 60 * 1000);
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
     student.otp = code;
     student.otpExpiry = expires;
     await student.save();
 
     try {
-      await sendVerificationEmail(email, code);
+      await sendOtpEmail(email, code);
     } catch (e) {
       console.warn("⚠️ Failed to resend verification email to student:", e.message);
     }

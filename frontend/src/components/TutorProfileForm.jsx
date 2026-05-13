@@ -187,7 +187,7 @@ const TutorProfileForm = ({
                 const data = await response.json();
                 if (response.ok) {
                     toast.success("Profile completed successfully!");
-                    // Do not redirect, stay on same page
+                    navigate("/tutordashboard");
                 } else {
                     toast.error(data.message || "Failed to update profile");
                 }

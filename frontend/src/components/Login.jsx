@@ -133,7 +133,7 @@ function Login() {
           message.toLowerCase().includes("verify your email")
         ) {
           setShowVerify(true);
-          setErrorMessage("You are not registered. Please register again and verify your email.");
+          setErrorMessage("Your email is not verified. Click 'Verify' below to verify your email before logging in.");
         } else {
           setErrorMessage(message);
         }

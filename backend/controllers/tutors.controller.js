@@ -1,97 +1,12 @@
-import {Tutor} from '../models/tutors.model.js';
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { Tutor } from '../models/tutors.model.js';
 import { Booking } from '../models/Booking.model.js';
 import { Student } from '../models/students.model.js';
-import bcrypt from "bcryptjs";
-import {z} from "zod";
 import { emailSchema, nameSchema, normalizeEmail, normalizeName, passwordSchema } from "../utils/authValidation.js";
-
-
-export const signup = async (req, res) => {
-    const {role, firstName, lastName, email, password} = req.body;
-
-    const signupSchema = z.object({
-      role: z.enum(["tutor", "student", "freelancer", "admin"]),
-      firstName: z.string()
-        .min(2, { message: "First name must be at least 2 characters long" })
-        .max(15, { message: "First name must be at most 15 characters" })
-        .regex(/^[A-Za-z]+$/, { message: "First name must contain only English letters (A-Z, a-z)" }),
-      lastName: z.string()
-        .min(2, { message: "Last name must be at least 2 characters long" })
-        .max(15, { message: "Last name must be at most 15 characters" })
-        .regex(/^[A-Za-z]+$/, { message: "Last name must contain only English letters (A-Z, a-z)" }),
-      email: z.string().email({ message: "Invalid email format" }),
-      password: z.string()
-        .min(6, { message: "Password must be at least 6 characters long" })
-        .max(15, { message: "Password must be at most 15 characters" })
-        .regex(/^[^\s]+$/, { message: "Password must not contain spaces" })
-    });
-
-const validation = signupSchema.safeParse(req.body);
-    if (!validation.success) {
-        return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
-    }
-
-    try {
-        const existingTutor = await Tutor.findOne({ email });
-        if (existingTutor) {
-            return res.status(400).json({
-                message: "User with this email already exists in tutor role. Please change your email.",
-                field: "email",
-                role: "tutor"
-            });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newTutor = new Tutor({
-            role,
-            firstName,
-            lastName,
-            email,
-            password : hashedPassword
-        });
-
-        await newTutor.save();
-        return res.status(201).json({ message: "Tutor registered successfully" });
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
-    }
-}
-
-// export const login = async (req, res) => {
-//     const { email, password } = req.body;
-
-//     const loginSchema = z.object({
-//         role: z.enum(["tutor", "student", "freelancer", "admin"]),
-//         email: z.string().email({ message: "Invalid email format" }),
-//         password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
-//     });
-
-//     const validation = loginSchema.safeParse(req.body);
-//     if (!validation.success) {
-//         return res.status(400).json({ errors: validation.error.issues.map(err => err.message) });
-//     }
-
-//     try {
-//         const tutor = await Tutor.findOne({ email: email });
-//         if (!tutor) {
-//             return res.status(400).json({ message: "Invalid email or password" });
-//         }
-
-//         const isMatch = await bcrypt.compare(password, tutor.password);
-//         if (!isMatch) {
-//             return res.status(400).json({ message: "Invalid email or password" });
-//         }
-
-//         return res.status(200).json({ message: "Login successful" });
-//     } catch (error) {
-//         return res.status(500).json({ message: "Internal server error" });
-//     }
-// };
-
-import jwt from "jsonwebtoken";
 import { sendOtpEmail } from "../utils/send-email.js";
+
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // ✅ Tutor Signup Controller
@@ -114,7 +29,6 @@ export const tutorSignup = async (req, res) => {
       return res.status(400).json({ errors: validation.error.issues.map((err) => err.message) });
     }
 
-    // Check if tutor already exists
     const existingTutor = await Tutor.findOne({ email });
     if (existingTutor) {
       return res.status(400).json({
@@ -124,22 +38,20 @@ export const tutorSignup = async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     const code = generateCode();
-    const expires = new Date(Date.now() + 5 * 60 * 1000);
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Create tutor with default values for required fields
     const tutor = await Tutor.create({
       role: "tutor",
       firstName,
       lastName,
       email,
       password: hashedPassword,
-      subjects: [], // Will be filled during profile completion
-      languages: [], // Will be filled during profile completion
-      hourlyRate: 0, // Will be set during profile completion
-      availability: [], // Will be set during profile completion
+      subjects: [],
+      languages: [],
+      hourlyRate: 0,
+      availability: [],
       profileCompleted: false,
       isVerified: false,
       otp: code,
@@ -165,7 +77,6 @@ export const tutorLogin = async (req, res) => {
   email = normalizeEmail(email);
 
   try {
-    // Check if tutor exists
     const tutor = await Tutor.findOne({ email });
     if (!tutor) {
       return res.status(404).json({ message: "Tutor not found" });
@@ -175,20 +86,17 @@ export const tutorLogin = async (req, res) => {
       return res.status(403).json({ message: "Please verify your email before logging in." });
     }
 
-    // Validate password
     const isMatch = await bcrypt.compare(password, tutor.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    // Create JWT token
     const token = jwt.sign(
       { id: tutor._id, role: "tutor" },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // Send response
     res.status(200).json({
       message: "Tutor login successful",
       token,
@@ -260,13 +168,13 @@ export const resendTutorOtp = async (req, res) => {
     }
 
     const code = generateCode();
-    const expires = new Date(Date.now() + 5 * 60 * 1000);
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
     tutor.otp = code;
     tutor.otpExpiry = expires;
     await tutor.save();
 
     try {
-      await sendVerificationEmail(email, code);
+      await sendOtpEmail(email, code);
     } catch (e) {
       console.warn("⚠️ Failed to resend verification email to tutor:", e.message);
     }
@@ -316,7 +224,6 @@ export const getTutors = async (req, res) => {
     let query = { profileCompleted: true };
 
     if (subject) {
-      // Case-insensitive match for subjects (student input may vary in casing)
       query.subjects = { $in: [new RegExp(subject, 'i')] };
     }
 
@@ -367,7 +274,6 @@ export const updateTutorProfile = async (req, res) => {
     if (updates.lastName) updates.lastName = normalizeName(updates.lastName);
     if (updates.email) updates.email = normalizeEmail(updates.email);
 
-    // Zod validation (same as signup, but all fields optional)
     const updateSchema = z.object({
       firstName: nameSchema("First name").optional(),
       lastName: nameSchema("Last name").optional(),
@@ -394,26 +300,20 @@ export const updateTutorProfile = async (req, res) => {
 // ✅ Get Tutor Bookings
 export const getTutorBookings = async (req, res) => {
   try {
-    // Defensive check for tutorId
     const tutorId = req.tutor && (req.tutor._id || req.tutor.id) ? (req.tutor._id || req.tutor.id).toString() : null;
     console.log(`[getTutorBookings] tutorId from req.tutor:`, req.tutor);
     if (!tutorId || tutorId === 'null' || tutorId === 'undefined') {
       console.error(`[getTutorBookings] tutorId is missing or invalid:`, tutorId);
       return res.status(400).json({ message: "Tutor ID missing or invalid in token. Please re-login." });
     }
-    // Find tutor and get subjects/domains
     const tutor = await Tutor.findById(tutorId);
     if (!tutor) {
       return res.status(404).json({ message: "Tutor not found" });
     }
-    // Find only this tutor's bookings (by tutorId)
     const bookings = await Booking.find({ tutorId })
       .populate('studentId', 'firstName lastName email')
       .sort({ createdAt: -1 });
     console.log("✅ Found", bookings.length, "bookings for tutor", tutor.firstName, tutor.lastName);
-    bookings.forEach(b => {
-      console.log("   - Booking:", b.subject, "by", b.studentId?.firstName || "(NO NAME)", "Price:", b.proposedPrice);
-    });
     res.status(200).json({ bookings });
   } catch (error) {
     console.error(`[getTutorBookings] Exception:`, error);
@@ -421,7 +321,7 @@ export const getTutorBookings = async (req, res) => {
   }
 };
 
-// Public: get bookings for a tutor by tutorId (useful when tutor's token isn't available)
+// Public: get bookings for a tutor by tutorId
 export const getPublicBookingsForTutor = async (req, res) => {
   try {
     const { id } = req.params;
@@ -446,7 +346,6 @@ export const negotiateBooking = async (req, res) => {
     const { id } = req.params;
     const { proposedPrice, message } = req.body;
 
-    // Find booking by id and ensure it belongs to this tutor
     const booking = await Booking.findOne({ _id: id, tutorId });
     if (!booking) {
       return res.status(404).json({ message: "Booking not found or not yours" });
@@ -463,7 +362,6 @@ export const negotiateBooking = async (req, res) => {
 
     await booking.save();
 
-    // Notify student
     const student = await Student.findById(booking.studentId);
     if (student) {
       student.notifications.push({
@@ -487,7 +385,6 @@ export const updateBookingStatus = async (req, res) => {
     const { status, counterPrice, classDueBy: classDueByInput } = req.body;
     const tutorId = req.tutor.id;
 
-    // Find booking by id and ensure it belongs to this tutor
     const booking = await Booking.findOne({ _id: id, tutorId });
     if (!booking) {
       return res.status(404).json({ message: "Booking not found or not yours" });
@@ -514,7 +411,6 @@ export const updateBookingStatus = async (req, res) => {
 
     await booking.save();
 
-    // Notify student
     const student = await Student.findById(booking.studentId);
     if (student) {
       student.notifications.push({ message: `Tutor updated booking status to ${status}` });
@@ -528,7 +424,7 @@ export const updateBookingStatus = async (req, res) => {
   }
 };
 
-// ✅ Create Session (link + deadline; after deadline unpaid/not-completed can be refunded)
+// ✅ Create Session
 export const createSession = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -579,7 +475,6 @@ export const markSessionDone = async (req, res) => {
     if (booking.studentMarkedDone) {
       booking.status = 'completed';
       booking.sessionCompletedAt = new Date();
-      // Release payment
       booking.paymentStatus = 'released';
       tutor = await Tutor.findById(tutorId);
       tutor.earnings += booking.proposedPrice;
@@ -589,9 +484,7 @@ export const markSessionDone = async (req, res) => {
     }
     await booking.save();
 
-    // Notifications
     if (paymentReleased) {
-      // Notify student
       const student = await Student.findById(booking.studentId);
       if (student) {
         student.notifications.push({
@@ -601,7 +494,6 @@ export const markSessionDone = async (req, res) => {
         });
         await student.save();
       }
-      // Notify tutor
       if (tutor) {
         tutor.notifications.push({
           message: `Payment for session '${booking.subject}' has been released to your account. Session marked as completed.`,
@@ -610,7 +502,6 @@ export const markSessionDone = async (req, res) => {
         });
         await tutor.save();
       }
-      // Notify admin
       const { Admin } = await import('../models/admin.model.js');
       const admins = await Admin.find({});
       for (const admin of admins) {
@@ -635,7 +526,7 @@ export const markSessionDone = async (req, res) => {
 export const withdrawEarnings = async (req, res) => {
   try {
     const tutorId = req.tutor.id;
-    const { amount, paymentMethodId } = req.body;
+    const { amount } = req.body;
 
     const tutor = await Tutor.findById(tutorId);
     if (!tutor) {
@@ -651,8 +542,6 @@ export const withdrawEarnings = async (req, res) => {
       return res.status(400).json({ message: "Insufficient earnings" });
     }
 
-    // Implement Stripe payout here
-    // For now, just deduct the withdrawn amount
     tutor.earnings -= withdrawAmount;
     await tutor.save();
 

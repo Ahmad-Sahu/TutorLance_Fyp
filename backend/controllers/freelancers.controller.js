@@ -133,7 +133,7 @@ export const registerFreelancer = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const code = generateCode();
-    const expires = new Date(Date.now() + 5 * 60 * 1000);
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
 
     const newFreelancer = new Freelancer({
       firstname: firstName || normalizeName(name).split(" ")[0] || name,
@@ -256,7 +256,7 @@ export const resendFreelancerOtp = async (req, res) => {
     }
 
     const code = generateCode();
-    const expires = new Date(Date.now() + 5 * 60 * 1000);
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
     freelancer.otp = code;
     freelancer.otpExpiry = expires;
     await freelancer.save();
