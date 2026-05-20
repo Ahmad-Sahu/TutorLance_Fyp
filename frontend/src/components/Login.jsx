@@ -1,4 +1,4 @@
-﻿import { API_BASE } from '../config.js';
+import { API_BASE } from '../config.js';
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { IoMdArrowRoundBack } from "react-icons/io";
@@ -27,6 +27,7 @@ function Login() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showVerify, setShowVerify] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const setSingleFieldError = (field, message = "") => {
@@ -149,38 +150,51 @@ function Login() {
 
   return (
     <>
-      <div className=" text-black font-semibold text-2xl px-20 py-12 flex justify-between">
-        <div className="flex items-center">
+      {/* Navbar */}
+      <div className="text-black font-semibold text-xl px-4 md:px-20 py-4 md:py-6">
+        <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <h1 className="mr-2"><SiStudyverse /></h1>
-            <h1 className="mr-10">TutorLance</h1>
+            <h1 className="mr-2 text-2xl"><SiStudyverse /></h1>
+            <h1 className="mr-4 md:mr-10 text-xl md:text-2xl">TutorLance</h1>
+            <div className="hidden md:flex">
+              <Link className="mr-10" to="/find-tutors">Find Tutor</Link>
+              <Link to="/signup">Become a Tutor</Link>
+            </div>
           </div>
-          <div>
-            <Link className="mr-10" to="/find-tutors">Find Tutor</Link>
-            <Link to="/signup">Become a Tutor</Link>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <a className="flex items-center mr-8 font-semibold" href="">
-            English <span className="text-4xl ml-2 font-bold"><MdExpandMore /></span>
-          </a>
-          <Link to="/login">
-            <button className="flex 0 text-black py-3 px-6 border-4 border-black rounded-full font-semibold">
-              <span className="text-2xl mr-4 mt-1"><LuArrowRightToLine /></span>Login/Signup
+          <div className="flex items-center gap-3">
+            <a className="hidden md:flex items-center font-semibold" href="">
+              English <span className="text-3xl ml-1 font-bold"><MdExpandMore /></span>
+            </a>
+            <Link to="/login" className="hidden md:block">
+              <button className="flex text-black py-2 px-4 border-2 border-black rounded-full font-semibold text-sm">
+                <span className="text-xl mr-2 mt-0.5"><LuArrowRightToLine /></span>Login/Signup
+              </button>
+            </Link>
+            <button
+              className="md:hidden text-black text-3xl focus:outline-none"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? '✕' : '☰'}
             </button>
-          </Link>
+          </div>
         </div>
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-4 flex flex-col gap-3 pb-4 border-t border-gray-200 pt-4">
+            <Link to="/find-tutors" onClick={() => setMobileMenuOpen(false)}>Find Tutor</Link>
+            <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>Become a Tutor</Link>
+          </div>
+        )}
       </div>
 
-      <div className="px-28">
+      <div className="px-4 md:px-28">
         <Link to="/">
           <IoMdArrowRoundBack className="text-3xl" />
         </Link>
       </div>
 
-      <div className="-mt-28 flex justify-center items-center min-h-screen bg-slate-50">
-        <div className="bg-white w-[400px] rounded-xl shadow-lg border border-gray-200 p-6">
+      <div className="-mt-10 md:-mt-28 flex justify-center items-center min-h-screen bg-slate-50 px-4">
+        <div className="bg-white w-full max-w-[400px] rounded-xl shadow-lg border border-gray-200 p-6">
           <h1 className="text-3xl font-bold text-center mb-6">Login</h1>
 
           <form onSubmit={handleSubmit}>
@@ -410,75 +424,74 @@ function Login() {
         </div>
       </div>
 
+      {/* Footer */}
       <div>
-        <div className="bg-blue-950 h-lvh text-white px-40 py-14 flex justify-between">
+        <div className="bg-blue-950 text-white px-6 md:px-40 py-14 grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
             <h1 className="font-bold text-3xl">About</h1>
-            <p className="mt-4 underline text-2xl text-light">Who we are?</p>
-            <p className="underline text-2xl text-light">How it works?</p>
-            <p className="underline text-2xl text-light">TutorLance reviews</p>
-            <p className="underline text-2xl text-light">Work at TutorLance</p>
-            <p className="text-2xl text-light">Status</p>
-            <p className="text-light text-xl">We stand with Palestine</p>
-            <p className="text-light text-xl">Affiliate Program</p>
+            <p className="mt-4 underline text-xl text-light">Who we are?</p>
+            <p className="underline text-xl text-light">How it works?</p>
+            <p className="underline text-xl text-light">TutorLance reviews</p>
+            <p className="underline text-xl text-light">Work at TutorLance</p>
+            <p className="text-xl text-light">Status</p>
+            <p className="text-light text-lg">We stand with Palestine</p>
+            <p className="text-light text-lg">Affiliate Program</p>
 
             <div>
-              <h1 className="mt-20 font-bold text-3xl">For Tutors</h1>
-              <p className="mt-4 underline text-2xl text-light">Become an Online Tutor</p>
-              <p className="underline text-2xl text-light">Teach CS courses online</p>
-              <p className="underline text-2xl text-light">Teach Mathematics online</p>
-              <p className="underline text-2xl text-light">Teach Science Online</p>
-              <p className="underline text-2xl text-light">See all online tutoring jobs</p>
+              <h1 className="mt-10 font-bold text-3xl">For Tutors</h1>
+              <p className="mt-4 underline text-xl text-light">Become an Online Tutor</p>
+              <p className="underline text-xl text-light">Teach CS courses online</p>
+              <p className="underline text-xl text-light">Teach Mathematics online</p>
+              <p className="underline text-xl text-light">Teach Science Online</p>
+              <p className="underline text-xl text-light">See all online tutoring jobs</p>
             </div>
           </div>
 
           <div>
             <h1 className="font-bold text-3xl">For Students</h1>
-            <p className="mt-4 underline text-xl text-light">TutorLance Blog</p>
-            <p className="underline text-2xl text-light">Questions and Answers</p>
-            <p className="underline text-2xl text-light">Student discount</p>
-            <p className="underline text-2xl text-light">Test your English for free</p>
-            <p className="underline text-2xl text-light">TutorLance discounts</p>
+            <p className="mt-4 underline text-lg text-light">TutorLance Blog</p>
+            <p className="underline text-xl text-light">Questions and Answers</p>
+            <p className="underline text-xl text-light">Student discount</p>
+            <p className="underline text-xl text-light">Test your English for free</p>
+            <p className="underline text-xl text-light">TutorLance discounts</p>
 
             <div>
-              <h1 className="mt-36 font-bold text-3xl">Learn</h1>
-              <p className="mt-4 underline text-xl text-light">Learn Programming Online</p>
-              <p className="underline text-2xl text-light">Learn Mathametics Online</p>
-              <p className="underline text-2xl text-light">
-                Learn Software Engineering <br /> courses Online
-              </p>
-              <p className="underline text-2xl text-light">Learn Mobile Application Online</p>
-              <p className="underline text-2xl text-light">Learn Python Online</p>
+              <h1 className="mt-10 font-bold text-3xl">Learn</h1>
+              <p className="mt-4 underline text-lg text-light">Learn Programming Online</p>
+              <p className="underline text-xl text-light">Learn Mathametics Online</p>
+              <p className="underline text-xl text-light">Learn Software Engineering courses Online</p>
+              <p className="underline text-xl text-light">Learn Mobile Application Online</p>
+              <p className="underline text-xl text-light">Learn Python Online</p>
             </div>
           </div>
 
           <div>
             <h1 className="font-bold text-2xl">Support</h1>
-            <p className="mt-4 underline text-2xl text-light">Need any Help?</p>
+            <p className="mt-4 underline text-xl text-light">Need any Help?</p>
 
             <h1 className="mt-10 text-3xl font-bold">Contacts</h1>
-            <p className="mt-4 text-2xl text-light">Gmail: abc@gmail.com</p>
-            <p className="mt-4 underline text-2xl text-light flex">
+            <p className="mt-4 text-xl text-light">Gmail: abc@gmail.com</p>
+            <p className="mt-4 underline text-xl text-light flex">
               <FaPhoneAlt /> <span className="ml-4">+92-300-7674574</span>
             </p>
-            <p className="mt-4 underline text-2xl text-light flex">
+            <p className="mt-4 underline text-xl text-light flex">
               <FaWhatsapp /> <span className="ml-4">+92-300-7674574</span>
             </p>
             <div>
-              <h1 className="mt-14 font-bold text-3xl">Tutors near you</h1>
-              <p className="mt-4 underline text-xl text-light">Tutors in Multan</p>
-              <p className="underline text-2xl text-light">Tutors in Islamabad</p>
-              <p className="underline text-2xl text-light">Tutors in Lahore</p>
-              <p className="underline text-2xl text-light">Tutors in Faislabad</p>
-              <p className="underline text-2xl text-light">Tutors in Peshawar</p>
+              <h1 className="mt-10 font-bold text-3xl">Tutors near you</h1>
+              <p className="mt-4 underline text-lg text-light">Tutors in Multan</p>
+              <p className="underline text-xl text-light">Tutors in Islamabad</p>
+              <p className="underline text-xl text-light">Tutors in Lahore</p>
+              <p className="underline text-xl text-light">Tutors in Faislabad</p>
+              <p className="underline text-xl text-light">Tutors in Peshawar</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-center bg-blue-950 text-white -mt-20 py-20">
-          <h1 className="underline text-xl">Legal Center</h1>
-          <h1 className="ml-12 underline text-xl">Privacy Policy</h1>
-          <h1 className="ml-12 underline text-xl">Cookies Policy</h1>
+        <div className="flex flex-wrap items-center justify-center bg-blue-950 text-white py-8 gap-4">
+          <h1 className="underline text-lg">Legal Center</h1>
+          <h1 className="underline text-lg">Privacy Policy</h1>
+          <h1 className="underline text-lg">Cookies Policy</h1>
         </div>
       </div>
     </>

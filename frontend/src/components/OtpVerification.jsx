@@ -99,7 +99,7 @@ const OtpVerification = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white w-[400px] rounded-xl shadow-lg border border-gray-200 p-6">
+      <div className="bg-white w-full max-w-[400px] rounded-xl shadow-lg border border-gray-200 p-6 mx-4">
         <h1 className="text-2xl font-bold text-center mb-4">Verify your email</h1>
         <p className="text-sm text-gray-600 mb-4 text-center">
           We have sent a 6-digit OTP to{" "}

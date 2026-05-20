@@ -3,7 +3,7 @@ import { Elements, useStripe, useElements, CardElement } from "@stripe/react-str
 import { loadStripe } from "@stripe/stripe-js";
 import { toast } from "react-hot-toast";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_KEY || "pk_test_51234567890");
+const stripePromise = import.meta.env.VITE_STRIPE_KEY ? loadStripe(import.meta.env.VITE_STRIPE_KEY) : null;
 
 function WithdrawModal({ open, onClose, maxAmount, onWithdraw }) {
   const [amount, setAmount] = useState("");
@@ -78,6 +78,16 @@ function WithdrawModal({ open, onClose, maxAmount, onWithdraw }) {
 }
 
 export default function WithdrawModalWithStripe(props) {
+  if (!stripePromise) {
+    return props.open ? (
+      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+          <p className="text-red-600 font-semibold">Stripe is not configured. Set VITE_STRIPE_KEY in your .env.local file.</p>
+          <button onClick={props.onClose} className="mt-4 bg-gray-500 text-white px-4 py-2 rounded">Close</button>
+        </div>
+      </div>
+    ) : null;
+  }
   return (
     <Elements stripe={stripePromise}>
       <WithdrawModal {...props} />

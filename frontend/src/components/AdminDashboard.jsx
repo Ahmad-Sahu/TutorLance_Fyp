@@ -15,6 +15,7 @@ const AdminDashboard = () => {
   const [unseenCount, setUnseenCount] = useState(0);
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState({ tutors: 0, students: 0, freelancers: 0, bookings: 0, completedBookings: 0, totalPayments: 0 });
   const [tutors, setTutors] = useState([]);
   const [students, setStudents] = useState([]);
@@ -153,11 +154,25 @@ const AdminDashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-100 text-gray-900 relative z-0 isolate">
-      <aside className="w-64 bg-indigo-700 text-white flex flex-col p-6 shrink-0 relative z-10">
-        <div className="mb-6">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-indigo-700 text-white px-4 py-3 flex items-center justify-between">
+        <button className="text-2xl focus:outline-none" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
+        <h1 className="text-lg font-bold">TutorLance Admin</h1>
+        <button type="button" onClick={() => { localStorage.removeItem("token"); navigate("/login"); }} className="text-red-300 text-sm">Logout</button>
+      </div>
+
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div className="md:hidden fixed inset-0 bg-black bg-opacity-40 z-20" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-30 md:z-10 w-64 bg-indigo-700 text-white flex flex-col p-6 shrink-0 min-h-screen transition-transform duration-300`}>
+        <div className="mb-6 hidden md:block">
           <h1 className="text-2xl font-bold">TutorLance Admin</h1>
         </div>
-        <nav className="space-y-1">
+        <nav className="space-y-1 mt-12 md:mt-0">
           {[
             ["dashboard", "Dashboard", <Users className="w-5 h-5" />],
             ["users", "Users", <UserCheck className="w-5 h-5" />],
@@ -165,16 +180,16 @@ const AdminDashboard = () => {
             ["complaints", "Complaints", <MessageSquare className="w-5 h-5" />],
             ["ratings", "Ratings & Reviews", <Star className="w-5 h-5" />],
           ].map(([key, label, icon]) => (
-            <button key={key} type="button" onClick={() => setActiveSection(key)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition ${activeSection === key ? "bg-indigo-600" : "hover:bg-indigo-600"}`}>
+            <button key={key} type="button" onClick={() => { setActiveSection(key); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition ${activeSection === key ? "bg-indigo-600" : "hover:bg-indigo-600"}`}>
               {icon} {label}
             </button>
           ))}
         </nav>
 
-        <button type="button" onClick={() => { localStorage.removeItem("token"); navigate("/login"); }} className="mt-6 text-red-300 hover:text-white cursor-pointer">Logout</button>
+        <button type="button" onClick={() => { localStorage.removeItem("token"); navigate("/login"); }} className="mt-6 text-red-300 hover:text-white cursor-pointer hidden md:block">Logout</button>
       </aside>
 
-      <main className="flex-1 p-8 overflow-y-auto relative z-10">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto relative z-10 mt-14 md:mt-0">
         {/* Small Notification Button, always visible */}
         <div className="flex justify-end mb-4">
           <button

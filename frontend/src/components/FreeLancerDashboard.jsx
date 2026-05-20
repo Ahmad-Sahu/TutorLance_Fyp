@@ -22,6 +22,7 @@ import FreelancerInfoForm from "./FreelancerInfoForm";
 
 const FreelancerDashboard = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [freelancer, setFreelancer] = useState(null);
   const [dashboardData, setDashboardData] = useState({});
   const [studentGigs, setStudentGigs] = useState([]); // 🎯 Added
@@ -392,15 +393,36 @@ const FreelancerDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-blue-50 to-purple-50">
+    <div className="min-h-screen flex bg-gradient-to-br from-blue-50 to-purple-50 relative">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white shadow px-4 py-3 flex items-center justify-between">
+        <button
+          className="text-2xl focus:outline-none"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle sidebar"
+        >
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
+        <h1 className="text-lg font-bold text-blue-600">TutorLance</h1>
+        <button onClick={handleLogout} className="text-red-500 font-semibold text-sm">Logout</button>
+      </div>
+
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black bg-opacity-40 z-20"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ===== Sidebar ===== */}
-      <div className="w-64 bg-white shadow-lg border-r border-gray-200 p-6 flex flex-col justify-between">
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-30 md:z-auto w-64 bg-white shadow-lg border-r border-gray-200 p-6 flex flex-col justify-between min-h-screen transition-transform duration-300`}>
         <div>
-          <h1 className="text-2xl font-bold text-blue-600 mb-8 text-center">
+          <h1 className="text-2xl font-bold text-blue-600 mb-8 text-center hidden md:block">
             TutorLance
           </h1>
 
-          <nav className="space-y-4">
+          <nav className="space-y-4 mt-4 md:mt-0">
             {[
               ["dashboard", "Dashboard", <FaTasks />],
               ["profile", "Profile", <FaUserCircle />],
@@ -414,7 +436,7 @@ const FreelancerDashboard = () => {
             ].map(([section, label, icon]) => (
               <button
                 key={section}
-                onClick={() => setActiveSection(section)}
+                onClick={() => { setActiveSection(section); setSidebarOpen(false); }}
                 className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-left transition-all relative ${
                   activeSection === section
                     ? "bg-blue-100 text-blue-700"
@@ -434,14 +456,14 @@ const FreelancerDashboard = () => {
 
         <button
           onClick={handleLogout}
-          className="text-red-500 mt-10 font-semibold hover:underline"
+          className="text-red-500 mt-10 font-semibold hover:underline hidden md:block"
         >
           Logout
         </button>
       </div>
 
       {/* ===== Main Content ===== */}
-      <div className="flex-1 p-10 overflow-y-auto">
+      <div className="flex-1 p-4 md:p-10 overflow-y-auto mt-14 md:mt-0">
         {/* ✅ Dashboard Overview */}
         {activeSection === "dashboard" && (
           <div>

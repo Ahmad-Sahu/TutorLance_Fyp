@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast'
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_KEY || 'pk_test_51234567890');
+const stripePromise = import.meta.env.VITE_STRIPE_KEY ? loadStripe(import.meta.env.VITE_STRIPE_KEY) : null;
 
 const PaymentPage = () => {
   const { offerId } = useParams();
@@ -168,9 +168,13 @@ const PaymentPage = () => {
         <label className="block mb-2 font-semibold">Amount</label>
         <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full border rounded p-2 mb-3" />
         {method === 'card' ? (
-          <Elements stripe={stripePromise}>
-            <PaymentCardForm />
-          </Elements>
+          stripePromise ? (
+            <Elements stripe={stripePromise}>
+              <PaymentCardForm />
+            </Elements>
+          ) : (
+            <p className="text-red-600 text-sm">Stripe is not configured. Set VITE_STRIPE_KEY in your .env.local file.</p>
+          )
         ) : (
           <button onClick={handlePay} disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded">
             {loading ? 'Processing...' : `Pay PKR ${offer.offeredAmount}`}

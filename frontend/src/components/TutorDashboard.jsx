@@ -27,6 +27,7 @@ const TutorDashboard = () => {
   const [myComplaints, setMyComplaints] = useState([]);
   const [acceptClassDueBy, setAcceptClassDueBy] = useState({});
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -245,34 +246,41 @@ const TutorDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-white">
-      <header className="bg-blue-950 text-white px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <SiStudyverse className="text-3xl" />
-          <h1 className="text-2xl font-bold">TutorLance — Tutor Dashboard</h1>
+      <header className="bg-blue-950 text-white px-4 md:px-8 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 md:gap-3">
+          <button
+            className="md:hidden text-white text-2xl focus:outline-none mr-1"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            {sidebarOpen ? '✕' : '☰'}
+          </button>
+          <SiStudyverse className="text-2xl md:text-3xl" />
+          <h1 className="text-base md:text-2xl font-bold">TutorLance — Tutor Dashboard</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <button
             type="button"
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative p-2 rounded hover:bg-white/10"
             aria-label="Notifications"
           >
-            <FaBell className="text-xl" />
+            <FaBell className="text-lg md:text-xl" />
             {notifications.filter((n) => !n.read).length > 0 && (
               <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {notifications.filter((n) => !n.read).length}
               </span>
             )}
           </button>
-          <div className="text-sm">Hello, <strong>{tutor.firstName}</strong></div>
-          <button className="bg-red-600 px-3 py-1 rounded" onClick={() => { localStorage.removeItem("token"); navigate("/login"); }}>
+          <div className="text-xs md:text-sm hidden sm:block">Hello, <strong>{tutor.firstName}</strong></div>
+          <button className="bg-red-600 px-2 md:px-3 py-1 rounded text-sm" onClick={() => { localStorage.removeItem("token"); navigate("/login"); }}>
             Logout
           </button>
         </div>
       </header>
 
       {showNotifications && (
-        <div className="absolute top-20 right-8 z-50 w-96 max-h-80 bg-white border rounded-lg shadow-lg overflow-auto">
+        <div className="fixed top-16 right-2 md:right-8 z-50 w-72 md:w-96 max-h-80 bg-white border rounded-lg shadow-lg overflow-auto">
           <div className="p-3 border-b font-semibold">Notifications</div>
           {notifications.length === 0 ? (
             <div className="p-4 text-gray-500">No notifications</div>
@@ -287,8 +295,15 @@ const TutorDashboard = () => {
         </div>
       )}
 
-      <div className="flex">
-        <aside className="w-80 p-6 bg-white shadow-lg">
+      <div className="flex relative">
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+          <div
+            className="md:hidden fixed inset-0 bg-black bg-opacity-40 z-20"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-30 md:z-auto w-72 md:w-80 p-6 bg-white shadow-lg min-h-screen transition-transform duration-300`}>
           <div className="mb-6 flex items-center gap-3">
             <Avatar src={tutor.profilePicture} firstName={tutor.firstName} lastName={tutor.lastName} size="lg" />
             <div>
@@ -311,31 +326,31 @@ const TutorDashboard = () => {
           />
 
           <nav className="space-y-2">
-            <button onClick={() => setActiveSection("profile")} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "profile" ? "bg-blue-50" : ""}`}>
+            <button onClick={() => { setActiveSection("profile"); setSidebarOpen(false); }} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "profile" ? "bg-blue-50" : ""}`}>
               <FaUser /> <span>Profile</span>
             </button>
-            <button onClick={() => setActiveSection("requests")} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "requests" ? "bg-blue-50" : ""}`}>
+            <button onClick={() => { setActiveSection("requests"); setSidebarOpen(false); }} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "requests" ? "bg-blue-50" : ""}`}>
               <FaInbox /> <span>Booking Requests ({pendingRequests.length})</span>
             </button>
-            <button onClick={() => setActiveSection("counterOffers")} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "counterOffers" ? "bg-blue-50" : ""}`}>
+            <button onClick={() => { setActiveSection("counterOffers"); setSidebarOpen(false); }} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "counterOffers" ? "bg-blue-50" : ""}`}>
               <FaRegHandshake /> <span>Counter Offers ({negotiating.length})</span>
             </button>
-            <button onClick={() => setActiveSection("queue")} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "queue" ? "bg-blue-50" : ""}`}>
+            <button onClick={() => { setActiveSection("queue"); setSidebarOpen(false); }} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "queue" ? "bg-blue-50" : ""}`}>
               <FaClipboardList /> <span>Booking Queue ({queue.length})</span>
             </button>
-            <button onClick={() => setActiveSection("delivered")} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "delivered" ? "bg-blue-50" : ""}`}>
+            <button onClick={() => { setActiveSection("delivered"); setSidebarOpen(false); }} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "delivered" ? "bg-blue-50" : ""}`}>
               <FaVideo /> <span>Delivered Classes ({delivered.length})</span>
             </button>
-            <button onClick={() => setActiveSection("reviews")} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "reviews" ? "bg-blue-50" : ""}`}>
+            <button onClick={() => { setActiveSection("reviews"); setSidebarOpen(false); }} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "reviews" ? "bg-blue-50" : ""}`}>
               <FaThumbsUp /> <span>Reviews</span>
             </button>
-            <button onClick={() => { setActiveSection("complaints"); axios.get(`${API}/complaints/my`, authHeaders()).then((r) => setMyComplaints(r.data.complaints || [])).catch(() => {}); }} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "complaints" ? "bg-blue-50" : ""}`}>
+            <button onClick={() => { setActiveSection("complaints"); setSidebarOpen(false); axios.get(`${API}/complaints/my`, authHeaders()).then((r) => setMyComplaints(r.data.complaints || [])).catch(() => {}); }} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeSection === "complaints" ? "bg-blue-50" : ""}`}>
               📩 Complaints
             </button>
           </nav>
         </aside>
 
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-8 min-w-0">
           {activeSection === "profile" && (
             <section>
               <h2 className="text-2xl font-bold mb-4">Profile</h2>
@@ -599,7 +614,7 @@ const TutorDashboard = () => {
                                   placeholder="Paste meeting link and send to student"
                                   value={sessionLinkInput[b._id] || ""}
                                   onChange={(e) => setSessionLinkInput((p) => ({ ...p, [b._id]: e.target.value }))}
-                                  className="border rounded px-3 py-2 w-72"
+                                  className="border rounded px-3 py-2 w-full md:w-72"
                                 />
                                 <input
                                   type="datetime-local"

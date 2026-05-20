@@ -279,6 +279,7 @@ const StudentDashboard = () => {
     const [tutors, setTutors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState('find-tutors');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [filters, setFilters] = useState({
         subject: '',
         priceMin: '',
@@ -462,32 +463,39 @@ const StudentDashboard = () => {
         <>
             <div className="bg-gray-200 min-h-screen">
                 {/* ====================== HEADER ====================== */}
-                <div className="bg-blue-950 text-white font-semibold text-2xl p-10 flex justify-between">
+                <div className="bg-blue-950 text-white font-semibold text-base md:text-2xl px-4 md:p-10 py-4 flex justify-between items-center">
                     <div className="flex items-center">
-                        <SiStudyverse className="mr-2 text-3xl" />
-                        <h1 className="mr-10">TutorLance</h1>
+                        <button
+                            className="md:hidden mr-3 text-2xl focus:outline-none"
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            aria-label="Toggle sidebar"
+                        >
+                            {sidebarOpen ? '✕' : '☰'}
+                        </button>
+                        <SiStudyverse className="mr-2 text-2xl md:text-3xl" />
+                        <h1 className="mr-4 md:mr-10 text-lg md:text-2xl">TutorLance</h1>
                     </div>
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2 md:space-x-4">
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className="relative bg-blue-800 px-4 py-2 rounded hover:bg-blue-900"
+                            className="relative bg-blue-800 px-2 md:px-4 py-2 rounded hover:bg-blue-900"
                             aria-label="Notifications"
                         >
-                            <FaBell className="text-xl" />
+                            <FaBell className="text-lg md:text-xl" />
                             {notifications.length > 0 && (
                                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                                     {notifications.length}
                                 </span>
                             )}
                         </button>
-                        <span>Welcome, {student.firstName}!</span>
+                        <span className="hidden sm:inline text-sm md:text-base">Welcome, {student.firstName}!</span>
                         <button
                             onClick={() => {
                                 localStorage.removeItem('token');
                                 localStorage.removeItem('student');
                                 navigate('/login');
                             }}
-                            className="bg-red-600 px-4 py-2 rounded hover:bg-red-700"
+                            className="bg-red-600 px-2 md:px-4 py-2 rounded hover:bg-red-700 text-sm md:text-base"
                         >
                             Logout
                         </button>
@@ -495,14 +503,21 @@ const StudentDashboard = () => {
                 </div>
 
                 {/* Main Layout with Sidebar */}
-                <div className="flex min-h-screen">
+                <div className="flex min-h-screen relative">
+                    {/* Mobile Overlay */}
+                    {sidebarOpen && (
+                        <div
+                            className="md:hidden fixed inset-0 bg-black bg-opacity-40 z-20"
+                            onClick={() => setSidebarOpen(false)}
+                        />
+                    )}
                     {/* Sidebar */}
-                    <div className="w-64 bg-white shadow-lg min-h-screen">
+                    <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-30 md:z-auto w-64 bg-white shadow-lg min-h-screen transition-transform duration-300`}>
                         <div className="p-6">
                             <h2 className="text-lg font-semibold mb-4">Student Dashboard</h2>
                             <nav className="space-y-2">
                                 <button
-                                    onClick={() => setActiveSection('find-tutors')}
+                                    onClick={() => { setActiveSection('find-tutors'); setSidebarOpen(false); }}
                                     className={`w-full text-left px-4 py-3 rounded-lg transition ${
                                         activeSection === 'find-tutors'
                                             ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700'
@@ -512,7 +527,7 @@ const StudentDashboard = () => {
                                     🔍 Find Tutors
                                 </button>
                                 <button
-                                    onClick={() => setActiveSection('my-bookings')}
+                                    onClick={() => { setActiveSection('my-bookings'); setSidebarOpen(false); }}
                                     className={`w-full text-left px-4 py-3 rounded-lg transition ${
                                         activeSection === 'my-bookings'
                                             ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700'
@@ -522,7 +537,7 @@ const StudentDashboard = () => {
                                     📅 My Bookings
                                 </button>
                                 <button
-                                    onClick={() => setActiveSection('my-classes')}
+                                    onClick={() => { setActiveSection('my-classes'); setSidebarOpen(false); }}
                                     className={`w-full text-left px-4 py-3 rounded-lg transition ${
                                         activeSection === 'my-classes'
                                             ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700'
@@ -532,7 +547,7 @@ const StudentDashboard = () => {
                                     📺 My Classes
                                 </button>
                                 <button
-                                    onClick={() => setActiveSection('negotiation')}
+                                    onClick={() => { setActiveSection('negotiation'); setSidebarOpen(false); }}
                                     className={`w-full text-left px-4 py-3 rounded-lg transition ${
                                         activeSection === 'negotiation'
                                             ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700'
@@ -542,7 +557,7 @@ const StudentDashboard = () => {
                                     🤝 Negotiation / Counter Offers
                                 </button>
                                 <button
-                                    onClick={() => setActiveSection('saved')}
+                                    onClick={() => { setActiveSection('saved'); setSidebarOpen(false); }}
                                     className={`w-full text-left px-4 py-3 rounded-lg transition ${
                                         activeSection === 'saved'
                                             ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700'
@@ -552,7 +567,7 @@ const StudentDashboard = () => {
                                     ❤️ Saved Tutors
                                 </button>
                                 <button
-                                    onClick={() => setActiveSection('my-gigs')}
+                                    onClick={() => { setActiveSection('my-gigs'); setSidebarOpen(false); }}
                                     className={`w-full text-left px-4 py-3 rounded-lg transition ${
                                         activeSection === 'my-gigs'
                                             ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700'
@@ -562,7 +577,7 @@ const StudentDashboard = () => {
                                     💼 My Gigs
                                 </button>
                                 <button
-                                    onClick={() => setActiveSection('profile')}
+                                    onClick={() => { setActiveSection('profile'); setSidebarOpen(false); }}
                                     className={`w-full text-left px-4 py-3 rounded-lg transition ${
                                         activeSection === 'profile'
                                             ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700'
@@ -572,7 +587,7 @@ const StudentDashboard = () => {
                                     👤 Profile
                                 </button>
                                 <button
-                                    onClick={() => setActiveSection('complaints')}
+                                    onClick={() => { setActiveSection('complaints'); setSidebarOpen(false); }}
                                     className={`w-full text-left px-4 py-3 rounded-lg transition ${
                                         activeSection === 'complaints'
                                             ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700'
@@ -587,7 +602,7 @@ const StudentDashboard = () => {
 
                 {/* Notifications Dropdown */}
                 {showNotifications && (
-                    <div className="absolute top-24 right-10 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-80 max-h-96 overflow-y-auto">
+                    <div className="fixed top-16 right-2 md:right-10 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-72 md:w-80 max-h-96 overflow-y-auto">
                         <div className="p-4 border-b">
                             <h3 className="font-semibold">Notifications</h3>
                         </div>
@@ -607,7 +622,7 @@ const StudentDashboard = () => {
                 )}
 
                     {/* Main Content */}
-                    <div className="flex-1 p-6">
+                    <div className="flex-1 p-4 md:p-6 min-w-0 w-full">
                         {/* Find Tutors Section */}
                         {activeSection === 'find-tutors' && (
                             <div className="py-8">

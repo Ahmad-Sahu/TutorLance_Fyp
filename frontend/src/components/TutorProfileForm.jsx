@@ -203,14 +203,14 @@ const TutorProfileForm = ({
     return (
         <div className="min-h-screen bg-gray-100">
             {/* Header */}
-            <div className="bg-blue-950 text-white font-semibold text-2xl p-10 flex justify-between">
+            <div className="bg-blue-950 text-white font-semibold text-xl px-4 md:px-10 py-4 md:py-6 flex justify-between">
                 <div className="flex items-center">
-                    <SiStudyverse className="mr-2 text-3xl" />
-                    <h1 className="mr-10">TutorLance</h1>
+                    <SiStudyverse className="mr-2 text-2xl md:text-3xl" />
+                    <h1 className="text-xl md:text-2xl">TutorLance</h1>
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto p-6">
+            <div className="max-w-4xl mx-auto p-4 md:p-6">
                 <h2 className="text-3xl font-bold text-gray-900 mb-8">{editMode ? "Edit Tutor Profile" : "Complete Your Tutor Profile"}</h2>
 
                 <form onSubmit={handleSubmit} className="space-y-6">

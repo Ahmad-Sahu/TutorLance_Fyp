@@ -10,6 +10,7 @@ import axios from 'axios';
 import Avatar from './Avatar';
 
 function FindTutors() {
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const token = localStorage.getItem('token');
     let loggedInName = null;
     let dashboardPath = '/login';
@@ -145,32 +146,49 @@ function FindTutors() {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Navigation Bar */}
-            <div className='bg-blue-950 text-white font-semibold text-2xl p-20 py-15 flex justify-between'>
-                <div className='flex items-center'>
+            <div className='bg-blue-950 text-white font-semibold text-xl px-4 md:px-20 py-4 md:py-6'>
+                <div className='flex justify-between items-center'>
                     <div className='flex items-center'>
-                        <h1 className='mr-2'><SiStudyverse /></h1>
-                        <h1 className='mr-10'>TutorLance</h1>
+                        <h1 className='mr-2 text-2xl'><SiStudyverse /></h1>
+                        <h1 className='mr-4 md:mr-10 text-xl md:text-2xl'>TutorLance</h1>
+                        <div className='hidden md:flex'>
+                            <Link className='mr-10 text-yellow-300' to="/find-tutors">Find Tutor</Link>
+                            <Link to="/signup">Become a Tutor</Link>
+                        </div>
                     </div>
-                    <div>
-                        <Link className='mr-10 text-yellow-300' to="/find-tutors">Find Tutor</Link>
-                        <Link to="/signup">Become a Tutor</Link>
-                    </div>
-                </div>
-
-                <div className='flex items-center justify-between'>
-                    <a className='flex items-center mr-8 font-semibold' href="">English <span className='text-4xl ml-2 font-bold'><MdExpandMore /></span></a>
-                    <Link to={dashboardPath}>
-                        <button type="button" className='flex items-center bg-blue-600 text-white py-3 px-6 border-4 border-white rounded-full font-semibold hover:bg-blue-700 transition-colors cursor-pointer'>
-                            {loggedInName ? (
-                                <span className='mr-2'>{loggedInName}'s Dashboard</span>
-                            ) : (
-                                <>
-                                    <span className='text-2xl mr-4 mt-1'><LuArrowRightToLine /></span>Login
-                                </>
-                            )}
+                    <div className='flex items-center gap-3'>
+                        <a className='hidden md:flex items-center font-semibold' href="">English <span className='text-3xl ml-1 font-bold'><MdExpandMore /></span></a>
+                        <Link to={dashboardPath} className='hidden md:block'>
+                            <button type="button" className='flex items-center bg-blue-600 text-white py-2 px-4 border-2 border-white rounded-full font-semibold hover:bg-blue-700 transition-colors cursor-pointer text-sm'>
+                                {loggedInName ? (
+                                    <span>{loggedInName}'s Dashboard</span>
+                                ) : (
+                                    <>
+                                        <span className='text-xl mr-2 mt-0.5'><LuArrowRightToLine /></span>Login
+                                    </>
+                                )}
+                            </button>
+                        </Link>
+                        <button
+                            className='md:hidden text-white text-3xl focus:outline-none'
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            aria-label="Toggle menu"
+                        >
+                            {mobileMenuOpen ? '✕' : '☰'}
                         </button>
-                    </Link>
+                    </div>
                 </div>
+                {mobileMenuOpen && (
+                    <div className='md:hidden mt-4 flex flex-col gap-3 pb-4 border-t border-blue-800 pt-4'>
+                        <Link className='text-yellow-300' to="/find-tutors" onClick={() => setMobileMenuOpen(false)}>Find Tutor</Link>
+                        <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>Become a Tutor</Link>
+                        <Link to={dashboardPath} onClick={() => setMobileMenuOpen(false)}>
+                            <button type="button" className='flex items-center bg-blue-600 text-white py-2 px-4 border-2 border-white rounded-full font-semibold text-sm'>
+                                {loggedInName ? <span>{loggedInName}'s Dashboard</span> : <><span className='text-xl mr-2'><LuArrowRightToLine /></span>Login</>}
+                            </button>
+                        </Link>
+                    </div>
+                )}
             </div>
 
             {/* Hero Section */}
